@@ -1,0 +1,23 @@
+{
+  "name": "ministers-engine",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Simulation engine for Ministers, a co-operative climate policy game. Engine + CLI only, no UI.",
+  "scripts": {
+    "sim": "node src/sim/run.ts",
+    "play": "node src/sim/play.ts",
+    "ledger": "node src/sim/ledger-demo.ts",
+    "dev": "vite",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0"
+  }
+}

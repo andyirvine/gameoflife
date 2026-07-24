@@ -1,0 +1,16 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.vite/
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editor cruft
+.DS_Store
+
+# local, machine-specific Claude Code settings (launch.json is kept)
+.claude/settings.local.json
