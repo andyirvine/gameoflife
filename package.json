@@ -9,6 +9,8 @@
     "play": "node src/sim/play.ts",
     "ledger": "node src/sim/ledger-demo.ts",
     "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
