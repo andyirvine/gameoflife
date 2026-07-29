@@ -241,16 +241,17 @@ button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
 .modal.theatre.rail .stage-anim { overflow: auto; flex: 1 1 auto; min-height: 0; }
 .modal.theatre.rail .mb { padding: 18px 26px; }
 .modal.theatre .mb p { line-height: 1.55; }
-.advice .head { color: var(--cyan); }
 .advisors { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-.advisor { border-left: 2px solid var(--line); padding: 3px 10px; animation: cardIn 0.3s ease both; }
-.advisor:nth-child(1) { border-color: var(--cyan); }
-.advisor:nth-child(2) { border-color: var(--amber); }
-.advisor:nth-child(3) { border-color: var(--green); }
-.advisor-h { display: flex; justify-content: space-between; align-items: baseline; }
-.advisor-h b { color: var(--ink); font-size: 12px; }
+.advisor {
+  border-left: 2px solid var(--amber); padding: 6px 12px; animation: cardIn 0.3s ease both;
+  background: linear-gradient(90deg, rgba(224,178,58,0.06), transparent 60%);
+}
+.advisor-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.advisor-h b { color: var(--amber); font-size: 11px; letter-spacing: 1.5px; }
 .advisor-h span { color: var(--ink-dim); font-size: 10px; font-style: italic; }
-.advisor p { margin: 2px 0 0; color: var(--ink-dim); line-height: 1.5; }
+.advisor p { margin: 0 0 6px; color: var(--ink); line-height: 1.55; }
+.advisor p:last-child { margin-bottom: 0; }
+.advisor p:first-child::first-line { font-weight: 600; }
 .card .nm { display: block; }
 
 /* intro tabs + how-to */

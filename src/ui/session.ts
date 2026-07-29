@@ -38,6 +38,43 @@ export const SEAT_WEAKNESS: Record<PortfolioId, string> = {
   resilience: 'only visible after something has already gone wrong',
 }
 
+// A curated, emotive reaction for the events that most demand a specific response, keyed by
+// the Events Deck card id (src/engine/events-deck.ts). `severity` ranks which event to lead
+// with when several land in one round; `priority` steers the recommended policy toward the
+// channel this event actually threatens.
+const EVENT_PLEA: Record<string, EventPlea> = {
+  'drought-belt': { priority: 'relief', severity: 6,
+    text: "the drought belt just widened again, and it does not retreat. Every round we do not answer it, more of the harvest fails for good — please, feed people before the numbers make it abstract." },
+  'monsoon-failure': { priority: 'relief', severity: 7,
+    text: 'a season of harvest is gone. The families it fed cannot wait for next year\'s policy — relief now costs less in lives than it will in two.' },
+  'regional-crop-failure': { priority: 'relief', severity: 6,
+    text: 'a staple crop has failed across several states. We are asking you, plainly: fund the relief before the famine numbers are the story, not the warning.' },
+  'category5-cyclone': { priority: 'resilience', severity: 7,
+    text: 'a storm has already hit a coastline we had not defended. Flood defence and resettlement were affordable yesterday; today they are overdue.' },
+  'wet-bulb-event': { priority: 'resilience', severity: 8,
+    text: 'people are dying of heat we did not adapt for. Every point spent on cooling now lands before the bodies do, not after — please do not let this one pass quietly.' },
+  'heatwave-cluster': { priority: 'resilience', severity: 6,
+    text: 'a heat dome is sitting over cities that have no cooling plan. This is exactly the round adaptation earns its keep.' },
+  'glacial-melt-stress': { priority: 'resilience', severity: 5,
+    text: 'the rivers that fed the dry season are already running short. Resilience spent here is cheaper than the water war that follows it.' },
+  'coral-collapse': { priority: 'mitigation', severity: 4,
+    text: 'the reef fisheries are going with the bleaching. It will read as scenery lost while people are dying elsewhere — it is not. It is food, and it is going.' },
+  'sea-level-surge': { priority: 'resilience', severity: 6,
+    text: 'a coastal surge has already put people underwater who had nowhere else to go. Resettlement paid for now is a life saved later, not a statistic changed.' },
+  'siberian-methane': { priority: 'mitigation', severity: 9,
+    text: 'the methane just released will not wait for a five-year plan. Every lag you were counting on just got shorter — please, do not bank on timelines that no longer exist.' },
+  'permafrost-carbon': { priority: 'mitigation', severity: 8,
+    text: 'the tundra has started emitting on its own. The budget you were governing to just shrank without asking you, and it will keep shrinking.' },
+  'amazon-dieback': { priority: 'mitigation', severity: 8,
+    text: 'the rainforest has tipped from sink to source. Restoration placed years out is moot now — what you do this round is what still counts.' },
+  'amoc-disruption': { priority: 'relief', severity: 8,
+    text: 'the circulation is stalling and breadbaskets are failing out of season. We are begging you to move on food before this compounds further.' },
+  'ice-sheet-instability': { priority: 'resilience', severity: 8,
+    text: 'a marine ice cliff has let go. Coastlines are moving faster than the pipeline can answer — resettlement and resilience cannot wait for the next plan.' },
+  'tipping-cascade': { priority: 'mitigation', severity: 10,
+    text: 'several tipping points have fired together. We do not have a gentler way to say this: nothing in flight will arrive in time unless you act this round.' },
+}
+
 export type MenuTier = {
   policyId: string; policyName: string; summary: string; severity: Severity
   cost: number; lag: number; effect: string; selfCost: number
@@ -47,7 +84,8 @@ export type MenuTier = {
   topples: boolean  // would this tier, on its own, fell a colleague already near the edge?
 }
 
-export type Advisor = { name: string; role: string; text: string }
+export type Advisor = { name: string; role: string; lines: string[] }
+type EventPlea = { priority: 'mitigation' | 'relief' | 'resilience'; severity: number; text: string }
 export type PipelineItem = { policyName: string; severity: Severity; landsRound: number; eta: string; by: PortfolioId; mine: boolean }
 export type Consequence = {
   round: number; year: number; total: number; byChannel: Record<DeathChannel, number>; cumulative: number
@@ -251,70 +289,70 @@ export class Session {
     return lines
   }
 
-  // Three expert voices, each reasoning over the real board — not flavour text. The Budget
-  // Office names an actual policy tier from the live menu; the other two read the political
-  // and planetary state respectively. This is the briefing you'd get before a real cabinet
-  // decision, not a hint system.
-  advisors(): Advisor[] {
+  // One compressed briefing, not a panel of separate voices — advisors who have seen the
+  // events land, seen the trajectory, and are pleading with you to act on both. Every line
+  // is grounded in this round's actual state: which event just hit, whether the emissions
+  // target is slipping away, and a SPECIFIC affordable policy that answers the loudest
+  // problem — the way a real chief of staff would put it in front of you, not a hint system.
+  briefing(): Advisor[] {
     const you = ministerOf(this.cabinet, this.seat)
     const health = you.politicalHealth
-    const pts = budgetFor(you)
     const fc = projectForecast(this.forecasts[this.seat], this.planet, this.acc, this.round)
     const menu = this.menu([])
-    const out: Advisor[] = []
+    const targets = assessTargets(this.planet, this.peakTemp)
+    const lines: string[] = []
 
-    // --- 1. Chief of Staff: political capital and who gets hurt ---
-    {
-      let text: string
-      const fragile = PORTFOLIOS.filter((p) => p !== this.seat && ministerOf(this.cabinet, p).politicalHealth < 3.5)
-      const dangerousOnMenu = menu.filter((t) => t.topples)
-      if (health < 3.5) {
-        const healer = menu.filter((t) => t.selfCost < 0).sort((a, b) => a.selfCost - b.selfCost)[0]
-        text = `You are at ${health.toFixed(1)} — one more bad hit and you are replaced by a successor who inherits your restrictions, not your judgement. `
-          + (healer ? `Take ${healer.policyName.toLowerCase()} (${healer.severity}) to rebuild standing before you spend it again.` : `Hold this round. Recovery is slow, but a fall is slower to undo.`)
-      } else if (dangerousOnMenu.length > 0) {
-        const names = [...new Set(dangerousOnMenu.map((t) => t.spill.find((s) => s.resultHealth <= 0)!.seat))].map((p) => SEAT_NAME[p].split(' ')[0])
-        text = `${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'} weak enough that your heaviest levers would end their office outright. That may be a price worth paying — but pay it on purpose, not by accident.`
-      } else if (fragile.length > 0) {
-        text = `${fragile.map((p) => SEAT_NAME[p].split(' ')[0]).join(', ')} ${fragile.length > 1 ? 'are' : 'is'} fragile but not yet exposed to anything on your menu. You have room to move this round.`
-      } else {
-        text = `The cabinet is stable. At ${health.toFixed(1)} and ${pts} points, you can afford a real decision — this is a round to spend, not to bank.`
+    // --- 1. React to what just landed, by name, if it touches this seat's domain ---
+    const relevant = this.events
+      .map((e) => ({ e, plea: EVENT_PLEA[e.id] }))
+      .filter((x): x is { e: EventCard; plea: EventPlea } => !!x.plea)
+    const worst = relevant.sort((a, b) => (b.plea.severity ?? 0) - (a.plea.severity ?? 0))[0]
+    if (worst) {
+      lines.push(`${worst.e.name.toUpperCase()} — ${worst.plea.text}`)
+    }
+
+    // --- 2. The emissions trajectory, named and urgent, not buried in a table ---
+    const emissionsTarget = targets.find((t) => t.name === 'Annual emissions')!
+    const tempTarget = targets.find((t) => t.name === 'Peak temperature')!
+    if (!emissionsTarget.hit && this.round >= 3) {
+      const nonMemberDriven = this.planet.nonMemberEmissions > this.planet.coalitionEmissions * 1.3
+      const ask = nonMemberDriven
+        ? `We will not reach it alone — every point you can put behind diplomacy drags the free-riders down with us. Please, spend on that lever before it closes.`
+        : `The cuts have to come from our own bloc, and they have to come now — every round we wait, the next one costs more.`
+      lines.push(`We are not going to hit the emissions target at this rate — ${this.planet.annualEmissions.toFixed(0)} Gt global against a ceiling of 18, with ${12 - this.round} rounds left. ${ask}`)
+    } else if (!tempTarget.hit && this.round >= 8) {
+      lines.push(`The temperature has not turned over yet, and the rounds to bend it are almost gone. If it does not fall by the time we settle, it never will on our watch.`)
+    }
+
+    // --- 3. The forecast's own plea, only if it's saying something urgent ---
+    if (fc.urgency > 0.55) {
+      lines.push(`Your own forecast is no longer hedging: ${fc.headline} We beg you not to wait for certainty you will not get in time.`)
+    }
+
+    // --- 4. A single, specific, affordable recommendation — the ask, not a menu tour ---
+    const priority: 'mitigation' | 'relief' | 'resilience' =
+      worst?.plea.priority ?? (fc.emphasis === 'food' ? 'relief' : fc.emphasis === 'displacement' ? 'resilience' : 'mitigation')
+    const safe = menu.filter((t) => !t.topples && t.impact[priority] > 0)
+    const best = safe.sort((a, b) => b.impact[priority] / b.cost - a.impact[priority] / a.cost)[0]
+    const boldest = menu.filter((t) => t.topples).sort((a, b) => b.impact[priority] - a.impact[priority])[0]
+
+    if (health < 3.5) {
+      const healer = menu.filter((t) => t.selfCost < 0).sort((a, b) => a.selfCost - b.selfCost)[0]
+      lines.push(`You are at ${health.toFixed(1)} — please, protect yourself this round. ` + (healer ? `${healer.policyName} (${healer.severity}) rebuilds your standing before you spend it again.` : `Hold. A fall costs more than a quiet round.`))
+    } else if (best) {
+      let ask = `Do this: ${best.policyName} (${best.severity}) — ${best.cost} point${best.cost === 1 ? '' : 's'} buys ${describeImpact(priority, best.impact[priority])}.`
+      if (boldest && boldest.impact[priority] > best.impact[priority] * 1.4) {
+        const victim = boldest.spill.find((s) => s.resultHealth <= 0)!
+        ask += ` ${boldest.policyName} (${boldest.severity}) would cut deeper, but it ends ${SEAT_NAME[victim.seat].split(' ')[0]}'s career to do it — only if you mean it.`
       }
-      out.push({ name: 'Chief of Staff', role: 'political capital', text })
+      lines.push(ask)
+    } else if (menu.length > 0) {
+      lines.push(`Nothing on the table moves the thing that most needs moving. We would rather you held than spent capital on a policy that does not answer it.`)
+    } else {
+      lines.push(`Nothing legal and affordable remains. You must hold, and we are sorry there is nothing better to offer.`)
     }
 
-    // --- 2. Head of Forecasting: what the planetary trajectory actually says ---
-    {
-      const urgencyWord = fc.urgency > 0.6 ? 'This is no longer a forecast, it is a warning' : fc.urgency > 0.35 ? 'Pressure is building on this reading' : 'Nothing here demands an emergency response yet'
-      out.push({
-        name: 'Head of Forecasting', role: `"${fc.name}" model`,
-        text: `${urgencyWord}. ${fc.headline} Confidence is only ${(fc.confidence * 100).toFixed(0)}% this early — weight it, do not obey it.`,
-      })
-    }
-
-    // --- 3. Budget Office: a named recommendation from what's actually affordable ---
-    {
-      const priority: 'mitigation' | 'relief' | 'resilience' =
-        fc.emphasis === 'food' ? 'relief' : fc.emphasis === 'displacement' ? 'resilience' : 'mitigation'
-      const safe = menu.filter((t) => !t.topples && t.impact[priority] > 0)
-      const best = safe.sort((a, b) => b.impact[priority] / b.cost - a.impact[priority] / a.cost)[0]
-      const boldest = menu.filter((t) => t.topples).sort((a, b) => b.impact[priority] - a.impact[priority])[0]
-      let text: string
-      if (best) {
-        text = `Best value on the table: ${best.policyName} (${best.severity}) — ${best.cost} points for ${describeImpact(priority, best.impact[priority])}. `
-        if (boldest && boldest.impact[priority] > best.impact[priority] * 1.4) {
-          const victim = boldest.spill.find((s) => s.resultHealth <= 0)!
-          text += `${boldest.policyName} (${boldest.severity}) cuts deeper still, but it costs ${SEAT_NAME[victim.seat].split(' ')[0]} their office. Your call.`
-        }
-      } else if (menu.length > 0) {
-        text = `Nothing on the menu moves the needle you most need moved this round. Consider building capacity instead, or holding.`
-      } else {
-        text = `Nothing legal and affordable remains. You must hold.`
-      }
-      out.push({ name: 'Budget Office', role: 'value for points', text })
-    }
-
-    return out
+    return [{ name: 'YOUR ADVISORS', role: `${12 - this.round} rounds left`, lines }]
   }
 
   // --- read model for the UI ---

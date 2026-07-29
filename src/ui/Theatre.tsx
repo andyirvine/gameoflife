@@ -29,7 +29,7 @@ export function Theatre({ session, onCommit, onEpilogue }: { session: Session; o
         {stage === 'diagnosis' && <Diagnosis s={s} lines={session.diagnosis()} onNext={advance} />}
         {stage === 'events' && <Events s={s} onNext={advance} />}
         {stage === 'options' && (
-          <Options session={session} s={s} advisors={session.advisors()} selected={selected} setSelected={setSelected} onCommit={commit} />
+          <Options session={session} s={s} advisors={session.briefing()} selected={selected} setSelected={setSelected} onCommit={commit} />
         )}
         {stage === 'resolution' && s.lastConsequence && <Resolution s={s} onNext={advance} last={session.phase === 'epilogue'} />}
       </div>
@@ -111,12 +111,11 @@ function Options({ session, s, advisors, selected, setSelected, onCommit }: {
     <>
       <Header tag={`ROUND ${s.round} · YOUR MOVE`} title={SEAT_NAME[s.seat].toUpperCase()} sub={`health ${s.you.health.toFixed(1)}/10 · ${remaining}/${s.you.budget} points · ${s.you.doctrine}`} />
       <div className="mb" style={{ maxHeight: '62vh', overflow: 'auto' }}>
-        <div className="dim" style={{ letterSpacing: 2, fontSize: 10, marginBottom: 4 }}>YOUR ADVISORS BRIEF YOU —</div>
         <div className="advisors">
           {advisors.map((a, i) => (
             <div key={i} className="advisor">
               <div className="advisor-h"><b>{a.name}</b><span>{a.role}</span></div>
-              <p>{a.text}</p>
+              {a.lines.map((line, j) => <p key={j}>{line}</p>)}
             </div>
           ))}
         </div>
