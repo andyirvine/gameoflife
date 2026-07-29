@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Session, SEAT_NAME } from './session.ts'
+import type { MenuTier } from './session.ts'
 import type { Committed, DeathChannel, PortfolioId } from '../engine/types.ts'
 
 const bn = (m: number) => (m / 1000).toFixed(2)
@@ -101,11 +102,16 @@ function Options({ session, s, advisors, selected, setSelected, onCommit }: {
   session: Session; s: Snap; advisors: import('./session.ts').Advisor[]; selected: Committed[]; setSelected: (f: (x: Committed[]) => Committed[]) => void; onCommit: () => void
 }) {
   const menu = session.menu(selected)
-  const remaining = s.you.budget - selected.reduce((a, m) => a + (session.menu([]).find((x) => x.policyId === m.policyId && x.severity === m.severity)?.cost ?? 0), 0)
-  const add = (m: Committed) => setSelected((x) => [...x, m])
+  const remaining = s.you.budget - selected.reduce((a, m) => a + (menu.find((x) => x.policyId === m.policyId && x.severity === m.severity)?.cost ?? 0), 0)
   const remove = (i: number) => setSelected((x) => x.filter((_, j) => j !== i))
+  const toggle = (t: MenuTier) => {
+    if (t.disabled && !t.selected) return
+    if (t.selected) setSelected((x) => x.filter((sel) => !(sel.policyId === t.policyId && sel.severity === t.severity)))
+    else setSelected((x) => [...x, { policyId: t.policyId, severity: t.severity, by: s.seat }])
+  }
   const groups: { id: string; name: string; summary: string; tiers: typeof menu }[] = []
   for (const t of menu) { let g = groups.find((x) => x.id === t.policyId); if (!g) { g = { id: t.policyId, name: t.policyName, summary: t.summary, tiers: [] }; groups.push(g) } g.tiers.push(t) }
+  const allDisabled = menu.every((t) => t.disabled)
 
   return (
     <>
@@ -125,7 +131,12 @@ function Options({ session, s, advisors, selected, setSelected, onCommit }: {
           <div key={g.id} className="policy">
             <div className="ph"><b>{g.name}</b> — <span>{g.summary}</span></div>
             {g.tiers.map((t) => (
-              <div key={t.severity} className="tier" onClick={() => add({ policyId: t.policyId, severity: t.severity, by: s.seat })}>
+              <div
+                key={t.severity}
+                className={`tier${t.disabled ? ' disabled' : ''}${t.selected ? ' selected' : ''}`}
+                onClick={() => toggle(t)}
+              >
+                <span className={`chk${t.selected ? ' checked' : ''}`} aria-hidden="true" />
                 <span className={`sev ${t.severity}`}>{t.severity}</span>
                 <span className="cost">{t.cost}p·L{t.lag}</span>
                 <span className="eff">{t.effect}</span>
@@ -141,7 +152,7 @@ function Options({ session, s, advisors, selected, setSelected, onCommit }: {
             ))}
           </div>
         ))}
-        {groups.length === 0 && <div className="dim">Nothing legal and affordable remains. You must hold.</div>}
+        {allDisabled && <div className="dim">Nothing legal and affordable remains. You must hold.</div>}
       </div>
       <div className="mb" style={{ paddingTop: 0 }}>
         <div className="committray">

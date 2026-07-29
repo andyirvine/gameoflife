@@ -159,9 +159,18 @@ a { color: var(--cyan); }
 .policy > .ph { padding: 4px 8px; border-bottom: 1px solid var(--line); }
 .policy > .ph b { color: var(--cyan); }
 .policy > .ph span { color: var(--ink-dim); }
-.tier { display: grid; grid-template-columns: 84px 46px 1fr auto; gap: 8px; align-items: center; padding: 4px 8px; cursor: pointer; border-top: 1px dashed var(--line); }
+.tier { display: grid; grid-template-columns: 16px 84px 46px 1fr auto; gap: 8px; align-items: center; padding: 4px 8px; cursor: pointer; border-top: 1px dashed var(--line); }
 .tier:hover { background: #142019; }
 .tier.selected { background: #10261a; outline: 1px solid var(--green); }
+.tier .chk {
+  width: 12px; height: 12px; border: 1px solid var(--ink-dim); background: transparent;
+  display: inline-block; position: relative; flex: 0 0 auto;
+}
+.tier.selected .chk, .tier .chk.checked { border-color: var(--green); background: var(--green); }
+.tier .chk.checked::after, .tier.selected .chk::after {
+  content: '✓'; position: absolute; inset: -3px 0 0 0; text-align: center;
+  font-size: 11px; line-height: 1; color: #06120b; font-weight: 700;
+}
 .tier .sev { text-transform: uppercase; font-size: 10px; letter-spacing: 1px; }
 .tier .sev.aggressive { color: var(--counter); }
 .tier .sev.moderate { color: var(--amber); }
@@ -171,6 +180,12 @@ a { color: var(--cyan); }
 .tier .pol { text-align: right; color: var(--ink-dim); white-space: nowrap; }
 .tier .topple { color: var(--counter); }
 .tier .props { color: var(--green); }
+
+/* disabled tiers stay visible (never hidden) but read as clearly unavailable */
+.tier.disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.6); }
+.tier.disabled:hover { background: none; }
+.tier.disabled .chk { border-color: var(--ink-dim); background: transparent; }
+.tier.disabled .chk.checked, .tier.disabled.selected .chk { background: var(--ink-dim); border-color: var(--ink-dim); }
 
 .committray { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }

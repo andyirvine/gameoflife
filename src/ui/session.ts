@@ -82,6 +82,8 @@ export type MenuTier = {
   // numeric impact, so advisors can reason about tiers without re-parsing the display string
   impact: { mitigation: number; relief: number; resilience: number }
   topples: boolean  // would this tier, on its own, fell a colleague already near the edge?
+  selected: boolean  // is this exact tier the one currently chosen for its policy this round?
+  disabled: boolean  // restricted, superseded by a different tier of the same policy, or unaffordable
 }
 
 export type Advisor = { name: string; role: string; lines: string[] }
@@ -160,19 +162,28 @@ export class Session {
   }
   private _ev!: ReturnType<typeof applyEvents>
 
-  // The player's own-portfolio menu, given tiers already selected this round.
+  // The player's own-portfolio menu, given tiers already selected this round. Returns the
+  // FULL catalogue for the seat — every tier, always — tagged with `selected` and `disabled`
+  // so the UI can grey out unavailable options rather than hiding them. A tier is disabled
+  // when the policy is restricted, when a different tier of the same policy is already
+  // selected (one tier per policy per round), or when it no longer fits the remaining budget.
+  // The currently-selected tier is never disabled, so it can always be toggled back off.
   menu(selected: Committed[]): MenuTier[] {
     const you = ministerOf(this.cabinet, this.seat)
-    const remaining = budgetFor(you) - selected.reduce((a, s) => a + pointCostFor(you, getPolicy(s.policyId), getTier(s.policyId, s.severity)), 0)
-    const enacted = new Set(selected.map((s) => s.policyId))
+    const budget = budgetFor(you)
+    const spentTotal = selected.reduce((a, s) => a + pointCostFor(you, getPolicy(s.policyId), getTier(s.policyId, s.severity)), 0)
     const sevs: Severity[] = ['light', 'moderate', 'aggressive']
     const out: MenuTier[] = []
     for (const policy of policiesByDomain(this.seat)) {
-      if (!isLegalFor(you, policy) || enacted.has(policy.id)) continue
+      const legal = isLegalFor(you, policy)
+      const pickedSeverity = selected.find((s) => s.policyId === policy.id)?.severity
       for (let i = 0; i < 3; i++) {
         const tier = policy.tiers[i]!
+        const severity = sevs[i]!
         const cost = pointCostFor(you, policy, tier)
-        if (cost > remaining) continue
+        const isSelected = pickedSeverity === severity
+        const affordable = isSelected || (budget - spentTotal) >= cost
+        const disabled = !legal || (pickedSeverity !== undefined && !isSelected) || !affordable
         const spill = (Object.entries(tier.politicalCost) as [PortfolioId, number][])
           .filter(([p, v]) => p !== this.seat && v !== 0)
           .map(([p, v]) => ({ seat: p, amount: v, resultHealth: ministerOf(this.cabinet, p).politicalHealth - v }))
@@ -184,9 +195,10 @@ export class Session {
         }
         out.push({
           policyId: policy.id, policyName: policy.name, summary: policyCopy(policy.id).summary,
-          severity: sevs[i]!, cost, lag: tier.lag, effect: effectSummary(tier),
+          severity, cost, lag: tier.lag, effect: effectSummary(tier),
           selfCost: tier.politicalCost[this.seat] ?? 0, spill, impact,
           topples: spill.some((sp) => sp.resultHealth <= 0),
+          selected: isSelected, disabled,
         })
       }
     }
@@ -332,12 +344,13 @@ export class Session {
     // --- 4. A single, specific, affordable recommendation — the ask, not a menu tour ---
     const priority: 'mitigation' | 'relief' | 'resilience' =
       worst?.plea.priority ?? (fc.emphasis === 'food' ? 'relief' : fc.emphasis === 'displacement' ? 'resilience' : 'mitigation')
-    const safe = menu.filter((t) => !t.topples && t.impact[priority] > 0)
+    const available = menu.filter((t) => !t.disabled)
+    const safe = available.filter((t) => !t.topples && t.impact[priority] > 0)
     const best = safe.sort((a, b) => b.impact[priority] / b.cost - a.impact[priority] / a.cost)[0]
-    const boldest = menu.filter((t) => t.topples).sort((a, b) => b.impact[priority] - a.impact[priority])[0]
+    const boldest = available.filter((t) => t.topples).sort((a, b) => b.impact[priority] - a.impact[priority])[0]
 
     if (health < 3.5) {
-      const healer = menu.filter((t) => t.selfCost < 0).sort((a, b) => a.selfCost - b.selfCost)[0]
+      const healer = available.filter((t) => t.selfCost < 0).sort((a, b) => a.selfCost - b.selfCost)[0]
       lines.push(`You are at ${health.toFixed(1)} — please, protect yourself this round. ` + (healer ? `${healer.policyName} (${healer.severity}) rebuilds your standing before you spend it again.` : `Hold. A fall costs more than a quiet round.`))
     } else if (best) {
       let ask = `Do this: ${best.policyName} (${best.severity}) — ${best.cost} point${best.cost === 1 ? '' : 's'} buys ${describeImpact(priority, best.impact[priority])}.`
@@ -346,7 +359,7 @@ export class Session {
         ask += ` ${boldest.policyName} (${boldest.severity}) would cut deeper, but it ends ${SEAT_NAME[victim.seat].split(' ')[0]}'s career to do it — only if you mean it.`
       }
       lines.push(ask)
-    } else if (menu.length > 0) {
+    } else if (available.length > 0) {
       lines.push(`Nothing on the table moves the thing that most needs moving. We would rather you held than spent capital on a policy that does not answer it.`)
     } else {
       lines.push(`Nothing legal and affordable remains. You must hold, and we are sorry there is nothing better to offer.`)
