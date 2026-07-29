@@ -12,7 +12,6 @@ export function Dashboard({ session, side }: { session: Session; side: 'left' | 
         <>
           <PlanetPanel s={s} />
           <TargetsPanel s={s} />
-          <SeatPanel s={s} />
         </>
       ) : (
         <>
@@ -137,20 +136,6 @@ function PipelinePanel({ s }: { s: Snap }) {
   )
 }
 
-function SeatPanel({ s }: { s: Snap }) {
-  return (
-    <div className="panel">
-      <h3><span>YOUR SEAT · {SEAT_NAME[s.seat]}</span><span>gen {s.you.gen} · {s.you.doctrine}</span></h3>
-      <div className="body">
-        <dl className="readout">
-          <dt>political health</dt><dd className={s.you.health < 3 ? 'hot' : s.you.health < 5 ? 'warn' : 'ok'}>{s.you.health.toFixed(1)} / 10</dd>
-          <dt>points this round</dt><dd className="ok">{s.you.budget}</dd>
-        </dl>
-        {s.you.restrictions.length > 0 && <div className="hot" style={{ fontSize: 10 }}>🔒 locked: {s.you.restrictions.map((r) => r.forbidsFlag).join(', ')}</div>}
-      </div>
-    </div>
-  )
-}
 
 function LedgerPanel({ s }: { s: Snap }) {
   return (
