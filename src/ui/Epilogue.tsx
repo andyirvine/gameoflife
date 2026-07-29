@@ -66,13 +66,6 @@ export function Epilogue({ data, onRestart }: { data: ReturnType<Session['epilog
             {d.vindIsYou && <span className="hot"> The lens that mattered was the one in your own files.</span>}
           </p>
 
-          <div className="mono-block" style={{ marginTop: 10 }}>
-            <div className="dim" style={{ letterSpacing: 2, fontSize: 10 }}>THE SLOPE</div>
-            Had the cabinet done nothing, the counter reaches {bn(d.shadow)} bn.
-            You bent it to {bn(d.counter)} bn — {bn(d.shadow - d.counter)} bn fewer dead than doing nothing.
-            You could not stop it. Nobody could. All you could do was change the slope.
-          </div>
-
           <div className="verdict">{verdict}</div>
 
           <div className="committray">

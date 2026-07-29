@@ -50,7 +50,7 @@ export type MenuTier = {
 export type Advisor = { name: string; role: string; text: string }
 export type PipelineItem = { policyName: string; severity: Severity; landsRound: number; eta: string; by: PortfolioId; mine: boolean }
 export type Consequence = {
-  round: number; year: number; total: number; byChannel: Record<DeathChannel, number>; cumulative: number; shadow: number
+  round: number; year: number; total: number; byChannel: Record<DeathChannel, number>; cumulative: number
   successions: { portfolio: PortfolioId; cause: string; archetype: string; byPlayer: boolean }[]
   cabinetMoves: { seat: PortfolioId; name: string; severity: Severity }[]
   playerMoves: { name: string; severity: Severity }[]
@@ -73,7 +73,6 @@ export class Session {
   private forecasts: Record<PortfolioId, ForecastModel>
   private instability: number
   private peakTemp: number
-  readonly shadow: number[]
 
   // per-round world phase
   private events: EventCard[] = []
@@ -99,7 +98,6 @@ export class Session {
     this.forecasts = assignForecasts(this.rng.fork(99))
     this.instability = cabinetInstability(this.cabinet)
     this.peakTemp = this.planet.tempAnomaly
-    this.shadow = doNothingBaseline(seed)
     this.beginRound()
   }
 
@@ -209,7 +207,6 @@ export class Session {
     for (const mv of playerMoves) for (const [p, v] of Object.entries(getTier(mv.policyId, mv.severity).politicalCost) as [PortfolioId, number][]) if (p !== this.seat && v !== 0) spillMap.set(p, (spillMap.get(p) ?? 0) + v)
     this.lastConsequence = {
       round: this.round, year: this.planet.year, total: resolved.entry.total, byChannel: resolved.entry.byChannel, cumulative: resolved.entry.cumulative,
-      shadow: this.round >= 1 && this.round <= 12 ? this.shadow[this.round - 1]! : this.shadow[11]!,
       successions: pol.successions.map((s) => ({ portfolio: s.portfolio, cause: s.cause, archetype: s.archetype, byPlayer: yourSpill.has(s.portfolio) })),
       cabinetMoves: this.aiMoves.map((mv) => ({ seat: mv.by, name: getPolicy(mv.policyId).name, severity: mv.severity })),
       playerMoves: playerMoves.map((mv) => ({ name: getPolicy(mv.policyId).name, severity: mv.severity })),
@@ -323,10 +320,9 @@ export class Session {
   // --- read model for the UI ---
   snapshot() {
     const you = ministerOf(this.cabinet, this.seat)
-    const shadowNow = this.round >= 2 ? this.shadow[this.round - 2]! : 0
     return {
       round: this.round, phase: this.phase, seat: this.seat, year: 2026 + 2 * this.round,
-      counter: this.planet.cumulativeDeaths, shadow: shadowNow, peakTemp: this.peakTemp,
+      counter: this.planet.cumulativeDeaths, peakTemp: this.peakTemp,
       planet: this.planet,
       targets: assessTargets(this.planet, this.peakTemp),
       you: { health: you.politicalHealth, gen: you.generation, budget: this.budget(), restrictions: you.restrictions, doctrine: you.doctrine },
@@ -368,7 +364,7 @@ export class Session {
     for (let i = 0; i < 10; i++) { const s = stepClimate(p, a, {}); p = s.planet; a = s.acc; if (p.year === 2074) y2074 = p }
     return {
       year: this.planet.year, planet: this.planet, peakTemp: this.peakTemp, falling,
-      counter: this.planet.cumulativeDeaths, shadow: this.shadow[11]!,
+      counter: this.planet.cumulativeDeaths,
       targets, targetsHit: targets.filter((t) => t.hit).length,
       falls: this.successions.length, dominant,
       vindSeat: vind.seat, vindEmphasis: vind.emphasis, vindName: this.forecasts[vind.seat].name,
@@ -426,23 +422,6 @@ function namedPreventable(ledger: DeathLedgerEntry[]) {
   let best: { round: number; year: number; channel: string; policy: string; points: number; unspent: number; avoided: number } | null = null
   for (const e of ledger) for (const pv of e.preventable) if (!best || pv.deathsAvoidable > best.avoided) best = { round: e.round, year: e.year, channel: pv.channel, policy: pv.availablePolicy, points: pv.pointsRequired, unspent: pv.cabinetPointsUnspent, avoided: pv.deathsAvoidable }
   return best
-}
-
-// Do-nothing shadow, mirrored from play.ts (independent rng stream).
-function doNothingBaseline(seed: number): number[] {
-  let planet = loadOpeningState(); let acc = initAccumulators(); let stocks = initStocks()
-  let deathModel = initDeathModel(); const pipeline = initPipeline()
-  const rng = makeRng((seed ^ 0x5eed) >>> 0); const out: number[] = []
-  for (let round = 1; round <= 12; round++) {
-    const fired = rollEvents(planet, rng); const ev = applyEvents(fired, pipeline, round)
-    const wc = drawWorldCard(0, rng); const effects: Partial<PlanetState> = { ...ev.planetPulse }
-    if (wc.planetPulse) for (const [k, v] of Object.entries(wc.planetPulse) as [keyof PlanetState, number][]) effects[k] = ((effects[k] as number) ?? 0) + v
-    const stepped = stepClimate(planet, acc, effects); planet = stepped.planet; acc = stepped.acc
-    stocks = stepStocks(stocks, [])
-    const resolved = resolveDeaths({ round, planet, stocks, shock: combineShocks(ev.disasterShocks), politicalInstability: 0, cabinetPointsUnspent: 0, unspentOptions: [] }, deathModel)
-    deathModel = resolved.model; planet = { ...planet, cumulativeDeaths: resolved.entry.cumulative }; out.push(planet.cumulativeDeaths)
-  }
-  return out
 }
 
 export type { Minister }

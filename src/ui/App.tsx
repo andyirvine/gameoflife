@@ -43,20 +43,11 @@ export function App() {
           <div>
             <div className="lbl">Cumulative excess deaths · climate impacts · global</div>
             <div className="big" key={s.counter}>{bn(s.counter)} bn</div>
-            <div className="slopebar">
-              <u style={{ width: `${(s.shadow / Math.max(s.shadow, s.counter, 1)) * 100}%` }} />
-              <i style={{ width: `${(s.counter / Math.max(s.shadow, s.counter, 1)) * 100}%` }} />
-            </div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div className="lbl">Round</div>
             <div style={{ fontSize: 22, color: 'var(--green)' }}>{s.round}<span className="dim" style={{ fontSize: 13 }}>/12</span></div>
             <div className="dim">{s.year} · {12 - s.round} left</div>
-          </div>
-          <div className="shadow">
-            <div className="lbl">Do-nothing shadow</div>
-            <div><b>{bn(s.shadow)} bn</b> if the cabinet did nothing</div>
-            {s.shadow > s.counter && <div className="bent">you've bent it {bn(s.shadow - s.counter)} bn — and it still rose</div>}
           </div>
         </div>
       )}

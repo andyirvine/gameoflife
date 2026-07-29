@@ -159,7 +159,6 @@ function Options({ session, s, advisors, selected, setSelected, onCommit }: {
 
 function Resolution({ s, onNext, last }: { s: Snap; onNext: () => void; last: boolean }) {
   const c = s.lastConsequence!
-  const bent = c.shadow - c.cumulative
   return (
     <>
       <Header tag={`ROUND ${c.round} RESOLVES · ${c.year}`} title="THE RECKONING" sub="Political cost is paid now. Planetary consequence lands on its own schedule." />
@@ -184,7 +183,7 @@ function Resolution({ s, onNext, last }: { s: Snap; onNext: () => void; last: bo
         <div className="chanrow" style={{ marginBottom: 8 }}>
           {CH.map((ch) => <span key={ch}>{ch} <b>{c.byChannel[ch].toFixed(0)}</b></span>)}
         </div>
-        <p>The counter climbs to <b className="hot">{bn(c.cumulative)} billion</b>. Had the cabinet done nothing it would read {bn(c.shadow)} — {bent > 0 ? <span className="ok">you have bent it {bn(bent)} bn, and it still rose.</span> : <span className="dim">and you have not yet bent it at all.</span>}</p>
+        <p>The counter climbs to <b className="hot">{bn(c.cumulative)} billion</b>.</p>
 
         <div className="committray">
           <div className="dim">{last ? 'The mandate is over. Four years pass...' : 'The next round assembles.'}</div>
