@@ -75,6 +75,20 @@ const EVENT_PLEA: Record<string, EventPlea> = {
     text: 'several tipping points have fired together. We do not have a gentler way to say this: nothing in flight will arrive in time unless you act this round.' },
 }
 
+// The vague, undirected part of the ask (briefing()'s closing line): what needs doing, and
+// how much room the minister has to do it. Deliberately never a specific policy — a general
+// says "take the hill", not which rifle to carry up it.
+const PRIORITY_ACTION: Record<'mitigation' | 'relief' | 'resilience', string> = {
+  mitigation: 'cutting our CO2 emissions',
+  relief: 'getting food and relief to the people going hungry',
+  resilience: 'building the defences that protect people from what is coming',
+}
+const CAPITAL_TONE: Record<'strong' | 'stable' | 'fragile', string> = {
+  strong: 'Your influence is strong, be bold.',
+  stable: 'You have real room to act — use it.',
+  fragile: 'You have some room left, but spend it carefully.',
+}
+
 export type MenuTier = {
   policyId: string; policyName: string; summary: string; severity: Severity
   cost: number; lag: number; effect: string; selfCost: number
@@ -310,7 +324,6 @@ export class Session {
     const you = ministerOf(this.cabinet, this.seat)
     const health = you.politicalHealth
     const fc = projectForecast(this.forecasts[this.seat], this.planet, this.acc, this.round)
-    const menu = this.menu([])
     const targets = assessTargets(this.planet, this.peakTemp)
     const lines: string[] = []
 
@@ -341,28 +354,33 @@ export class Session {
       lines.push(`Your own forecast is no longer hedging: ${fc.headline} We beg you not to wait for certainty you will not get in time.`)
     }
 
-    // --- 4. A single, specific, affordable recommendation — the ask, not a menu tour ---
+    // --- 4. A DIRECTION, not a named policy — a general who says "take the hill", not
+    // which rifle to carry up it. Composed from three independent readings: what needs
+    // doing (priority), how urgently (blended from the event, the emissions gap, and the
+    // forecast), and how much room the minister actually has to act (political capital).
+    // Deliberately never names a policy, tier, cost, or colleague — the player chooses how.
     const priority: 'mitigation' | 'relief' | 'resilience' =
-      worst?.plea.priority ?? (fc.emphasis === 'food' ? 'relief' : fc.emphasis === 'displacement' ? 'resilience' : 'mitigation')
-    const available = menu.filter((t) => !t.disabled)
-    const safe = available.filter((t) => !t.topples && t.impact[priority] > 0)
-    const best = safe.sort((a, b) => b.impact[priority] / b.cost - a.impact[priority] / a.cost)[0]
-    const boldest = available.filter((t) => t.topples).sort((a, b) => b.impact[priority] - a.impact[priority])[0]
+      worst?.plea.priority ?? (!emissionsTarget.hit ? 'mitigation' : fc.emphasis === 'food' ? 'relief' : fc.emphasis === 'displacement' ? 'resilience' : 'mitigation')
 
-    if (health < 3.5) {
-      const healer = available.filter((t) => t.selfCost < 0).sort((a, b) => a.selfCost - b.selfCost)[0]
-      lines.push(`You are at ${health.toFixed(1)} — please, protect yourself this round. ` + (healer ? `${healer.policyName} (${healer.severity}) rebuilds your standing before you spend it again.` : `Hold. A fall costs more than a quiet round.`))
-    } else if (best) {
-      let ask = `Do this: ${best.policyName} (${best.severity}) — ${best.cost} point${best.cost === 1 ? '' : 's'} buys ${describeImpact(priority, best.impact[priority])}.`
-      if (boldest && boldest.impact[priority] > best.impact[priority] * 1.4) {
-        const victim = boldest.spill.find((s) => s.resultHealth <= 0)!
-        ask += ` ${boldest.policyName} (${boldest.severity}) would cut deeper, but it ends ${SEAT_NAME[victim.seat].split(' ')[0]}'s career to do it — only if you mean it.`
-      }
-      lines.push(ask)
-    } else if (available.length > 0) {
-      lines.push(`Nothing on the table moves the thing that most needs moving. We would rather you held than spent capital on a policy that does not answer it.`)
+    const urgencyScore = Math.max(
+      worst ? worst.plea.severity / 10 : 0,
+      emissionsTarget.hit ? 0 : 0.65,
+      fc.urgency,
+    )
+    const urgencyPhrase =
+      urgencyScore >= 0.75 ? 'drastically, and immediately'
+      : urgencyScore >= 0.45 ? 'drastically, and soon'
+      : 'steadily, before the window closes'
+
+    const capital: 'strong' | 'stable' | 'fragile' | 'critical' =
+      health >= 8 ? 'strong' : health >= 5 ? 'stable' : health >= 3.5 ? 'fragile' : 'critical'
+
+    if (capital === 'critical') {
+      lines.push(`You are at ${health.toFixed(1)} — protect your standing before you spend what remains. The cabinet needs you in the chair more than it needs one more policy this round.`)
     } else {
-      lines.push(`Nothing legal and affordable remains. You must hold, and we are sorry there is nothing better to offer.`)
+      const action = PRIORITY_ACTION[priority]
+      const tone = CAPITAL_TONE[capital]
+      lines.push(`We need to start ${action}, ${urgencyPhrase}. ${tone}`)
     }
 
     return [{ name: 'YOUR ADVISORS', role: `${12 - this.round} rounds left`, lines }]
@@ -431,11 +449,6 @@ export class Session {
 // --- helpers ---
 function band(h: number): string {
   return h >= 8 ? 'STRONG' : h >= 5 ? 'stable' : h >= 3 ? 'FRAGILE' : h >= 1 ? 'CRITICAL' : 'FALLEN'
-}
-function describeImpact(kind: 'mitigation' | 'relief' | 'resilience', v: number): string {
-  if (kind === 'mitigation') return `~${v.toFixed(1)} Gt-equivalent of cuts`
-  if (kind === 'relief') return `~${v.toFixed(0)}M off food insecurity`
-  return `~${v.toFixed(0)} points of resilience`
 }
 
 function effectSummary(tier: import('../engine/types.ts').PolicyTier): string {
