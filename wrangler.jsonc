@@ -1,0 +1,13 @@
+{
+  // Cloudflare Worker config. Today this deploys the built static game as an assets-only
+  // Worker (no server code yet), which is why `npx wrangler deploy` is the correct command
+  // once `npm run build` has produced ./dist. When multiplayer arrives, this same Worker
+  // gains a `main` entry point and Durable Object bindings for the authoritative game rooms —
+  // the static front end and the backend then live in one deploy.
+  "name": "gameoflife",
+  "compatibility_date": "2026-07-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
