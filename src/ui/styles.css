@@ -55,14 +55,21 @@ a { color: var(--cyan); }
 .slopebar > i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--counter); }
 .slopebar > u { position: absolute; top: 0; bottom: 0; left: 0; background: rgba(224,178,58,0.25); text-decoration: none; }
 
-/* ---------- playfield: staged play (left rail) + ever-present stats (right) ---------- */
-.playfield { display: flex; gap: 14px; align-items: flex-start; }
-.theatre-rail { flex: 0 0 452px; position: sticky; top: 10px; align-self: flex-start; }
-.stats { flex: 1 1 auto; min-width: 0; }
+/* ---------- stage: dashboard flanks left/right, the theatre holds centre stage ---------- */
+.stage { display: flex; gap: 16px; align-items: flex-start; }
+.stage-side { flex: 0 0 300px; width: 300px; min-width: 0; opacity: 0.88; filter: saturate(0.9); }
+.stage-side .col { position: sticky; top: 10px; min-width: 0; }
+.stage-side:hover { opacity: 1; filter: none; transition: opacity 0.2s, filter 0.2s; }
+.stage-center { flex: 1 1 auto; min-width: 380px; position: sticky; top: 10px; align-self: flex-start; }
 
-/* ---------- grid ---------- */
+.col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel { min-width: 0; }
+.panel .body { min-width: 0; overflow-wrap: break-word; }
+.targets { min-width: 0; }
+.targets .t { min-width: 0; }
+.targets .name { min-width: 0; overflow-wrap: break-word; }
+/* legacy grid still used nowhere now, harmless if referenced */
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; align-items: start; }
-.col { display: flex; flex-direction: column; gap: 12px; }
 
 /* ---------- animation ---------- */
 @keyframes stageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -107,8 +114,9 @@ a { color: var(--cyan); }
 .split .nonmember { background: repeating-linear-gradient(45deg, #3a2a10, #3a2a10 4px, #2a1e0c 4px, #2a1e0c 8px); }
 
 /* ---------- targets ---------- */
-.targets { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; }
-.targets .t { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
+.targets { display: grid; grid-template-columns: 1fr; gap: 3px 14px; }
+.targets .t { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; white-space: nowrap; }
+.targets .name { overflow: hidden; text-overflow: ellipsis; }
 .targets .t .mark { width: 12px; }
 .targets .hit .mark, .targets .hit .name { color: var(--green); }
 .targets .miss .mark { color: var(--counter); }
@@ -175,6 +183,8 @@ a { color: var(--cyan); }
 .chip:hover { background: #10261a; }
 button.act { font-family: var(--mono); background: var(--green); color: #06120b; border: none; padding: 7px 18px; font-weight: 700; letter-spacing: 1px; cursor: pointer; }
 button.act:hover { filter: brightness(1.12); }
+button.act:disabled { background: var(--line); color: var(--ink-dim); cursor: not-allowed; }
+button.act:disabled:hover { filter: none; }
 button.ghost { font-family: var(--mono); background: transparent; color: var(--ink-dim); border: 1px solid var(--line); padding: 7px 14px; cursor: pointer; }
 button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
 
@@ -210,14 +220,31 @@ button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
   display: flex; align-items: flex-start; justify-content: center; padding: 74px 24px 40px;
 }
 .modal.theatre { max-width: 760px; box-shadow: 0 0 90px rgba(55,214,122,0.10), 0 24px 70px rgba(0,0,0,0.7); }
-/* docked left rail: a persistent panel, not a centered overlay */
+
+/* centre-stage treatment: the ONE thing the eye should land on. Brighter border, a warm
+   spotlight glow behind it, and a background a shade lighter than the flanking panels so it
+   visually sits "in front of" the dashboard rather than being just another box in a row. */
 .modal.theatre.rail {
-  max-width: none; width: 100%; box-shadow: 0 0 40px rgba(55,214,122,0.06);
+  max-width: none; width: 100%;
+  background: linear-gradient(180deg, #101d17, #0b1512);
+  border: 1px solid #2f5f45;
+  box-shadow: 0 0 0 1px rgba(55,214,122,0.08), 0 0 90px rgba(55,214,122,0.16), 0 30px 80px rgba(0,0,0,0.75);
   display: flex; flex-direction: column; max-height: calc(100vh - 130px);
+  position: relative;
 }
+.modal.theatre.rail::before {
+  /* soft radial spotlight behind the stage, reinforcing "centre of attention" */
+  content: ''; position: absolute; inset: -40px; z-index: -1;
+  background: radial-gradient(60% 55% at 50% 10%, rgba(55,214,122,0.10), transparent 70%);
+  pointer-events: none;
+}
+.modal.theatre.rail .mh {
+  padding: 16px 26px 14px; border-bottom: 1px solid #2f5f45;
+  background: linear-gradient(180deg, rgba(55,214,122,0.06), transparent);
+}
+.modal.theatre.rail .mh .t { font-size: 24px; text-shadow: 0 0 22px rgba(55,214,122,0.35); }
 .modal.theatre.rail .stage-anim { overflow: auto; flex: 1 1 auto; min-height: 0; }
-.modal.theatre.rail .mh { padding: 14px 22px; }
-.modal.theatre.rail .mb { padding: 16px 22px; }
+.modal.theatre.rail .mb { padding: 18px 26px; }
 .modal.theatre .mb p { line-height: 1.55; }
 .advice .head { color: var(--cyan); }
 .card .nm { display: block; }

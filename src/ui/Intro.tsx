@@ -3,7 +3,7 @@ import { PORTFOLIOS, SEAT_NAME, SEAT_WEAKNESS } from './session.ts'
 import type { PortfolioId } from '../engine/types.ts'
 
 export function Intro({ onStart }: { onStart: (seat: PortfolioId, seed: number) => void }) {
-  const [seat, setSeat] = useState<PortfolioId>('treasury')
+  const [seat, setSeat] = useState<PortfolioId | ''>('')
   const [seed] = useState(() => Math.floor(Math.random() * 1e6))
   const [view, setView] = useState<'briefing' | 'howto'>('briefing')
 
@@ -23,19 +23,13 @@ export function Intro({ onStart }: { onStart: (seat: PortfolioId, seed: number) 
           <div className="mb">
             <p className="lead">
               You are one seat in the cabinet of the <b>Climate Union</b> — the EU and the willing,
-              a coalition of roughly 30% of global emissions. You govern your own bloc directly.
-              The other 70% of the world — the free-riders — you can only <i>drag</i>, through
-              diplomacy, trade, and the border levy.
+              a coalition of roughly 30% of global emissions. 
             </p>
             <p className="dim">
-              There is no winning. There is only how many people die, and whether the next
-              generation gets a chance. Every policy that helps the planet costs you politically;
-              every policy that saves your standing costs the planet time. Consequences arrive
-              late — you will be judged in year six for a decision that pays off in year twenty.
-              One number sits above everything, and it only ever rises.
+              
             </p>
             <hr className="rule" />
-            <div className="dim" style={{ marginBottom: 6 }}>TAKE YOUR SEAT — each has a structural weakness you cannot fix:</div>
+            <div className="dim" style={{ marginBottom: 6 }}>Choose your position in the cabinet</div>
             <div className="seatpick">
               {PORTFOLIOS.map((p) => (
                 <div key={p} className={`seat${seat === p ? ' on' : ''}`} onClick={() => setSeat(p)}>
@@ -45,13 +39,16 @@ export function Intro({ onStart }: { onStart: (seat: PortfolioId, seed: number) 
               ))}
             </div>
             <div className="committray">
-              <div className="dim">World seed {seed} · 12 rounds of two years · assessed four years on, in 2054</div>
-              <button className="act" onClick={() => onStart(seat, seed)}>CONVENE CABINET ▸</button>
+              <div className="dim">
+                World seed {seed} · 12 rounds of two years · assessed four years on, in 2054
+                {!seat && <span className="warn"> · pick a seat above to convene</span>}
+              </div>
+              <button className="act" disabled={!seat} onClick={() => seat && onStart(seat, seed)}>CONVENE CABINET ▸</button>
             </div>
           </div>
         ) : (
           <div className="mb howto">
-            <div className="ht-lead">Your mission is not to win — you cannot. It is to decide <b>what kind of survival</b>, and how much of the toll you were willing to prevent.</div>
+            <div className="ht-lead">Your mission is to prevent as many deaths as possible.</div>
 
             <div className="ht-h">EACH ROUND PLAYS IN FOUR BEATS, twelve times over:</div>
             <ol>

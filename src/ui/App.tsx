@@ -61,15 +61,22 @@ export function App() {
         </div>
       )}
 
-      {/* left: the staged play. right: the ever-present vital statistics. */}
+      {/* the theatre holds centre stage; the dashboard flanks it left and right */}
       {session && (
-        <div className="playfield">
-          {screen === 'play' && (
-            <div className="theatre-rail">
+        <div className="stage">
+          <div className="stage-side">
+            <Dashboard session={session} side="left" />
+          </div>
+
+          <div className="stage-center">
+            {screen === 'play' && (
               <Theatre session={session} onCommit={onCommit} onEpilogue={() => setScreen('epilogue')} />
-            </div>
-          )}
-          <div className="stats"><Dashboard session={session} /></div>
+            )}
+          </div>
+
+          <div className="stage-side">
+            <Dashboard session={session} side="right" />
+          </div>
         </div>
       )}
 
