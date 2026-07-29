@@ -29,7 +29,7 @@ export function Theatre({ session, onCommit, onEpilogue }: { session: Session; o
         {stage === 'diagnosis' && <Diagnosis s={s} lines={session.diagnosis()} onNext={advance} />}
         {stage === 'events' && <Events s={s} onNext={advance} />}
         {stage === 'options' && (
-          <Options session={session} s={s} advice={session.advice()} selected={selected} setSelected={setSelected} onCommit={commit} />
+          <Options session={session} s={s} advisors={session.advisors()} selected={selected} setSelected={setSelected} onCommit={commit} />
         )}
         {stage === 'resolution' && s.lastConsequence && <Resolution s={s} onNext={advance} last={session.phase === 'epilogue'} />}
       </div>
@@ -97,8 +97,8 @@ function Events({ s, onNext }: { s: Snap; onNext: () => void }) {
   )
 }
 
-function Options({ session, s, advice, selected, setSelected, onCommit }: {
-  session: Session; s: Snap; advice: string[]; selected: Committed[]; setSelected: (f: (x: Committed[]) => Committed[]) => void; onCommit: () => void
+function Options({ session, s, advisors, selected, setSelected, onCommit }: {
+  session: Session; s: Snap; advisors: import('./session.ts').Advisor[]; selected: Committed[]; setSelected: (f: (x: Committed[]) => Committed[]) => void; onCommit: () => void
 }) {
   const menu = session.menu(selected)
   const remaining = s.you.budget - selected.reduce((a, m) => a + (session.menu([]).find((x) => x.policyId === m.policyId && x.severity === m.severity)?.cost ?? 0), 0)
@@ -111,8 +111,14 @@ function Options({ session, s, advice, selected, setSelected, onCommit }: {
     <>
       <Header tag={`ROUND ${s.round} · YOUR MOVE`} title={SEAT_NAME[s.seat].toUpperCase()} sub={`health ${s.you.health.toFixed(1)}/10 · ${remaining}/${s.you.budget} points · ${s.you.doctrine}`} />
       <div className="mb" style={{ maxHeight: '62vh', overflow: 'auto' }}>
-        <div className="advice">
-          {advice.map((a, i) => <p key={i} className={i === 0 ? 'head' : 'dim'} style={{ margin: '0 0 6px' }}>{a}</p>)}
+        <div className="dim" style={{ letterSpacing: 2, fontSize: 10, marginBottom: 4 }}>YOUR ADVISORS BRIEF YOU —</div>
+        <div className="advisors">
+          {advisors.map((a, i) => (
+            <div key={i} className="advisor">
+              <div className="advisor-h"><b>{a.name}</b><span>{a.role}</span></div>
+              <p>{a.text}</p>
+            </div>
+          ))}
         </div>
         {s.you.restrictions.length > 0 && <div className="hot" style={{ fontSize: 11 }}>🔒 locked out of: {s.you.restrictions.map((r) => r.forbidsFlag).join(', ')}</div>}
         <hr className="rule" />

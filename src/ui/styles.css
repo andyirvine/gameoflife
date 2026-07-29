@@ -248,6 +248,15 @@ button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
 .modal.theatre.rail .mb { padding: 18px 26px; }
 .modal.theatre .mb p { line-height: 1.55; }
 .advice .head { color: var(--cyan); }
+.advisors { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.advisor { border-left: 2px solid var(--line); padding: 3px 10px; animation: cardIn 0.3s ease both; }
+.advisor:nth-child(1) { border-color: var(--cyan); }
+.advisor:nth-child(2) { border-color: var(--amber); }
+.advisor:nth-child(3) { border-color: var(--green); }
+.advisor-h { display: flex; justify-content: space-between; align-items: baseline; }
+.advisor-h b { color: var(--ink); font-size: 12px; }
+.advisor-h span { color: var(--ink-dim); font-size: 10px; font-style: italic; }
+.advisor p { margin: 2px 0 0; color: var(--ink-dim); line-height: 1.5; }
 .card .nm { display: block; }
 
 /* intro tabs + how-to */

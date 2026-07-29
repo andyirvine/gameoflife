@@ -42,7 +42,12 @@ export type MenuTier = {
   policyId: string; policyName: string; summary: string; severity: Severity
   cost: number; lag: number; effect: string; selfCost: number
   spill: { seat: PortfolioId; amount: number; resultHealth: number }[]
+  // numeric impact, so advisors can reason about tiers without re-parsing the display string
+  impact: { mitigation: number; relief: number; resilience: number }
+  topples: boolean  // would this tier, on its own, fell a colleague already near the edge?
 }
+
+export type Advisor = { name: string; role: string; text: string }
 export type PipelineItem = { policyName: string; severity: Severity; landsRound: number; eta: string; by: PortfolioId; mine: boolean }
 export type Consequence = {
   round: number; year: number; total: number; byChannel: Record<DeathChannel, number>; cumulative: number; shadow: number
@@ -135,10 +140,17 @@ export class Session {
         const spill = (Object.entries(tier.politicalCost) as [PortfolioId, number][])
           .filter(([p, v]) => p !== this.seat && v !== 0)
           .map(([p, v]) => ({ seat: p, amount: v, resultHealth: ministerOf(this.cabinet, p).politicalHealth - v }))
+        const e = tier.effects
+        const impact = {
+          mitigation: Math.max(0, -((e.coalitionEmissions ?? 0) + (e.nonMemberEmissions ?? 0))) + Math.max(0, -(e.methane ?? 0)) / 200,
+          relief: Math.max(0, -(e.foodInsecure ?? 0)),
+          resilience: (tier.adaptationValue ?? 0) + (tier.resilienceValue ?? 0) + (tier.resettleValue ?? 0),
+        }
         out.push({
           policyId: policy.id, policyName: policy.name, summary: policyCopy(policy.id).summary,
           severity: sevs[i]!, cost, lag: tier.lag, effect: effectSummary(tier),
-          selfCost: tier.politicalCost[this.seat] ?? 0, spill,
+          selfCost: tier.politicalCost[this.seat] ?? 0, spill, impact,
+          topples: spill.some((sp) => sp.resultHealth <= 0),
         })
       }
     }
@@ -242,15 +254,70 @@ export class Session {
     return lines
   }
 
-  advice(): string[] {
-    const fc = projectForecast(this.forecasts[this.seat], this.planet, this.acc, this.round)
+  // Three expert voices, each reasoning over the real board — not flavour text. The Budget
+  // Office names an actual policy tier from the live menu; the other two read the political
+  // and planetary state respectively. This is the briefing you'd get before a real cabinet
+  // decision, not a hint system.
+  advisors(): Advisor[] {
     const you = ministerOf(this.cabinet, this.seat)
-    const lines: string[] = []
-    lines.push(`Your forecast, "${fc.name}" (${fc.concernLabel}), foregrounds ${fc.emphasis}. ${fc.headline}`)
-    lines.push(`You hold ${budgetFor(you)} points and ${you.politicalHealth.toFixed(0)} of 10 in standing. ${you.politicalHealth < 4 ? 'Too weak for a bold stroke — take a light tier, buy back health, or hold and recover.' : you.politicalHealth >= 8 ? 'Strong enough to take a heavy hit, if the cut is worth the career it costs.' : 'Enough room for a real move, but not a ruinous one.'}`)
-    if (this.round >= 10) lines.push(`With ${12 - this.round + 1} rounds left, only fast levers — relief, adaptation, methane, pricing — will land before 2054. The long game is closed.`)
-    else lines.push(`Remember the lag: what you enact now lands in ${2026 + 2 * (this.round + 2)} or later. You are governing the world your successor inherits.`)
-    return lines
+    const health = you.politicalHealth
+    const pts = budgetFor(you)
+    const fc = projectForecast(this.forecasts[this.seat], this.planet, this.acc, this.round)
+    const menu = this.menu([])
+    const out: Advisor[] = []
+
+    // --- 1. Chief of Staff: political capital and who gets hurt ---
+    {
+      let text: string
+      const fragile = PORTFOLIOS.filter((p) => p !== this.seat && ministerOf(this.cabinet, p).politicalHealth < 3.5)
+      const dangerousOnMenu = menu.filter((t) => t.topples)
+      if (health < 3.5) {
+        const healer = menu.filter((t) => t.selfCost < 0).sort((a, b) => a.selfCost - b.selfCost)[0]
+        text = `You are at ${health.toFixed(1)} — one more bad hit and you are replaced by a successor who inherits your restrictions, not your judgement. `
+          + (healer ? `Take ${healer.policyName.toLowerCase()} (${healer.severity}) to rebuild standing before you spend it again.` : `Hold this round. Recovery is slow, but a fall is slower to undo.`)
+      } else if (dangerousOnMenu.length > 0) {
+        const names = [...new Set(dangerousOnMenu.map((t) => t.spill.find((s) => s.resultHealth <= 0)!.seat))].map((p) => SEAT_NAME[p].split(' ')[0])
+        text = `${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'} weak enough that your heaviest levers would end their office outright. That may be a price worth paying — but pay it on purpose, not by accident.`
+      } else if (fragile.length > 0) {
+        text = `${fragile.map((p) => SEAT_NAME[p].split(' ')[0]).join(', ')} ${fragile.length > 1 ? 'are' : 'is'} fragile but not yet exposed to anything on your menu. You have room to move this round.`
+      } else {
+        text = `The cabinet is stable. At ${health.toFixed(1)} and ${pts} points, you can afford a real decision — this is a round to spend, not to bank.`
+      }
+      out.push({ name: 'Chief of Staff', role: 'political capital', text })
+    }
+
+    // --- 2. Head of Forecasting: what the planetary trajectory actually says ---
+    {
+      const urgencyWord = fc.urgency > 0.6 ? 'This is no longer a forecast, it is a warning' : fc.urgency > 0.35 ? 'Pressure is building on this reading' : 'Nothing here demands an emergency response yet'
+      out.push({
+        name: 'Head of Forecasting', role: `"${fc.name}" model`,
+        text: `${urgencyWord}. ${fc.headline} Confidence is only ${(fc.confidence * 100).toFixed(0)}% this early — weight it, do not obey it.`,
+      })
+    }
+
+    // --- 3. Budget Office: a named recommendation from what's actually affordable ---
+    {
+      const priority: 'mitigation' | 'relief' | 'resilience' =
+        fc.emphasis === 'food' ? 'relief' : fc.emphasis === 'displacement' ? 'resilience' : 'mitigation'
+      const safe = menu.filter((t) => !t.topples && t.impact[priority] > 0)
+      const best = safe.sort((a, b) => b.impact[priority] / b.cost - a.impact[priority] / a.cost)[0]
+      const boldest = menu.filter((t) => t.topples).sort((a, b) => b.impact[priority] - a.impact[priority])[0]
+      let text: string
+      if (best) {
+        text = `Best value on the table: ${best.policyName} (${best.severity}) — ${best.cost} points for ${describeImpact(priority, best.impact[priority])}. `
+        if (boldest && boldest.impact[priority] > best.impact[priority] * 1.4) {
+          const victim = boldest.spill.find((s) => s.resultHealth <= 0)!
+          text += `${boldest.policyName} (${boldest.severity}) cuts deeper still, but it costs ${SEAT_NAME[victim.seat].split(' ')[0]} their office. Your call.`
+        }
+      } else if (menu.length > 0) {
+        text = `Nothing on the menu moves the needle you most need moved this round. Consider building capacity instead, or holding.`
+      } else {
+        text = `Nothing legal and affordable remains. You must hold.`
+      }
+      out.push({ name: 'Budget Office', role: 'value for points', text })
+    }
+
+    return out
   }
 
   // --- read model for the UI ---
@@ -318,6 +385,12 @@ export class Session {
 function band(h: number): string {
   return h >= 8 ? 'STRONG' : h >= 5 ? 'stable' : h >= 3 ? 'FRAGILE' : h >= 1 ? 'CRITICAL' : 'FALLEN'
 }
+function describeImpact(kind: 'mitigation' | 'relief' | 'resilience', v: number): string {
+  if (kind === 'mitigation') return `~${v.toFixed(1)} Gt-equivalent of cuts`
+  if (kind === 'relief') return `~${v.toFixed(0)}M off food insecurity`
+  return `~${v.toFixed(0)} points of resilience`
+}
+
 function effectSummary(tier: import('../engine/types.ts').PolicyTier): string {
   const e = tier.effects
   const parts: string[] = []
