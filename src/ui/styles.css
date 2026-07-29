@@ -115,8 +115,9 @@ a { color: var(--cyan); }
 
 /* ---------- targets ---------- */
 .targets { display: grid; grid-template-columns: 1fr; gap: 3px 14px; }
-.targets .t { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; white-space: nowrap; }
-.targets .name { overflow: hidden; text-overflow: ellipsis; }
+.targets .t { display: grid; grid-template-columns: 12px 1fr auto; gap: 8px; padding: 1px 0; white-space: nowrap; }
+.targets .name { text-align: left; overflow: hidden; text-overflow: ellipsis; }
+.targets .val { text-align: right; }
 .targets .t .mark { width: 12px; }
 .targets .hit .mark, .targets .hit .name { color: var(--green); }
 .targets .miss .mark { color: var(--counter); }
