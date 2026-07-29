@@ -304,14 +304,14 @@ export class Session {
     const hit = t.filter((x) => x.hit).length
     const lines: string[] = []
     const falling = this.peakTemp > p.tempAnomaly + 0.01
-    lines.push(`It is ${2026 + 2 * this.round}. The planet holds at ${p.tempAnomaly.toFixed(2)}°C${falling ? ', just off its peak' : ' and climbing'}. The counter stands at ${(p.cumulativeDeaths / 1000).toFixed(2)} billion and has never once fallen.`)
-    lines.push(`Your coalition emits ${p.coalitionEmissions.toFixed(0)} Gt and is yours to govern. The free-riders you cannot — ${p.nonMemberEmissions.toFixed(0)} Gt — drift upward regardless, and drag the whole world's temperature with them.`)
-    if (p.foodInsecure > 600) lines.push(`${Math.round(p.foodInsecure)} million are food-insecure, past the line where the harvest itself begins to kill.`)
+    lines.push(`It is ${2026 + 2 * this.round}. The planet's temperature anomaly is ${p.tempAnomaly.toFixed(2)}°C${falling ? ', just off its peak' : ' and climbing'}. ${(p.cumulativeDeaths / 1000).toFixed(2)} billion have died due to climate change so far.`)
+    lines.push(`Your coalition currently emits ${p.coalitionEmissions.toFixed(0)} Gt and. The world emits ${p.nonMemberEmissions.toFixed(0)} Gt.`)
+    if (p.foodInsecure > 600) lines.push(`${Math.round(p.foodInsecure)} million are food-insecure.`)
     else lines.push(`Food insecurity holds at ${Math.round(p.foodInsecure)} million — under the line, for now.`)
     lines.push(`${hit} of nine planetary targets are on track for the 2054 assessment.`)
     const frag = PORTFOLIOS.filter((pf) => pf !== this.seat && ministerOf(this.cabinet, pf).politicalHealth < 3)
     if (frag.length) lines.push(`Around the table, ${frag.map((f) => SEAT_NAME[f].split(' ')[0]).join(', ')} ${frag.length > 1 ? 'are each' : 'is'} one bad round from falling.`)
-    else lines.push(`The cabinet, for now, holds together.`)
+    else lines.push(`The cabinet, for now, holds strong.`)
     return lines
   }
 

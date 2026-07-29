@@ -75,7 +75,7 @@ function runBatch(strategy: StrategyName | null, n: number): GameRecord[] {
 function runVerbose() {
   const g = playGame({ seed: seed0, playerSeat: seat, ...(strategyArg ? { strategy: strategyArg } : {}) })
   const who = strategyArg ? `player seat ${CODE[seat]} = ${strategyArg}, five AI` : 'all six seats AI'
-  console.log(`\n################  MINISTERS — one game, ${who}, seed ${seed0}  ################\n`)
+  console.log(`\n################  GAME OF LIFE — one game, ${who}, seed ${seed0}  ################\n`)
 
   for (const r of g.rounds) {
     console.log(`── Round ${r.round}  (${2026 + 2 * r.round})  ${r.temp.toFixed(2)}°C ` + '─'.repeat(34))
@@ -101,7 +101,7 @@ function runReport() {
   const primary = runBatch(primaryName, games)
   const label = primaryName ? `${primaryName} @ ${CODE[seat]}` : 'all-AI'
 
-  console.log(`\n################  MINISTERS — batch report  ################`)
+  console.log(`\n################  GAME OF LIFE — batch report  ################`)
   console.log(`Games: ${games}   Base seed: ${seed0}   Primary config: ${label}\n`)
 
   // 1. Outcome distribution

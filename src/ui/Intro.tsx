@@ -11,7 +11,7 @@ export function Intro({ onStart }: { onStart: (seat: PortfolioId, seed: number) 
     <div className="modal-scrim">
       <div className="modal">
         <div className="mh">
-          <div className="t">MINISTERS</div>
+          <div className="t">GAME OF LIFE</div>
           <div className="s">A cabinet of the Climate Union · a twenty-year mandate · a planet already 1.3°C too warm</div>
           <div className="introtabs">
             <button className={view === 'briefing' ? 'on' : ''} onClick={() => setView('briefing')}>THE BRIEFING</button>
@@ -21,9 +21,12 @@ export function Intro({ onStart }: { onStart: (seat: PortfolioId, seed: number) 
 
         {view === 'briefing' ? (
           <div className="mb">
+           <p className="lead">
+              We're in deep trouble. Our paney is overheating. 7 out of 9 planetary targets are off track. A climate union has been convened to save as much as they can. Tough calls lie ahead.
+            </p>
             <p className="lead">
-              You are one seat in the cabinet of the <b>Climate Union</b> — the EU and the willing,
-              a coalition of roughly 30% of global emissions. 
+              You are one seat in the cabinet of the <b>Climate Union</b> — a coalition of the EU and the willing,
+              responsible roughly 30% of global emissions. 
             </p>
             <p className="dim">
               

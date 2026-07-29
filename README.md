@@ -1,4 +1,4 @@
-# Ministers
+# Game of Life
 
 A co-operative game about trying to steer the climate with the political capital you can
 actually spend. You are one seat in the cabinet of the **Climate Union** — a coalition of

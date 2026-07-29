@@ -84,8 +84,7 @@ Being right, unprovable, and destroyed for it is a complete arc, and the game sh
 
 Twelve rounds, roughly two years each.
 
-### Phase 1: The world moves
-Two decks resolve. They do different jobs and should feel different.
+### Phase 1: Newsflash
 
 **World Deck. Responsive. Political and economic.**
 Draws are weighted by the current state of the game, not a fixed schedule. Non member states defect, free ride, or open back channels. Elections turn. Coalitions fracture. Summits achieve nothing. Industry relocates. A tipping point warning turns out to have been a modelling error, and gets used for the next decade to discredit everything else.

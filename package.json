@@ -1,9 +1,9 @@
 {
-  "name": "ministers-engine",
+  "name": "game-of-life",
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "Simulation engine for Ministers, a co-operative climate policy game. Engine + CLI only, no UI.",
+  "description": "Simulation engine for Game of Life, a co-operative climate policy game. Engine + CLI, plus a React UI.",
   "scripts": {
     "sim": "node src/sim/run.ts",
     "play": "node src/sim/play.ts",

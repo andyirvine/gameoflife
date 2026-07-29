@@ -128,7 +128,7 @@ async function main() {
   const seed = Number(arg('--seed', String(Math.floor(Math.random() * 1e6))))
 
   say('\n' + rule('═'))
-  say('  MINISTERS — you have a twenty-year mandate and a planet already 1.3°C hot.')
+  say('  GAME OF LIFE — you have a twenty-year mandate and a planet already 1.3°C hot.')
   say(rule('═'))
   say('\nThere is no winning. There is only how many people die, and whether the next')
   say('generation gets a chance. Every policy that helps the planet costs you politically.')

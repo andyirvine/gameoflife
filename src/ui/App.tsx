@@ -33,7 +33,7 @@ export function App() {
   return (
     <div className="terminal">
       <div className="topbar">
-        <div className="brand">MINISTERS<small>CLIMATE UNION · CABINET TERMINAL v0.9</small></div>
+        <div className="brand">GAME OF LIFE<small>CLIMATE UNION · CABINET TERMINAL v0.9</small></div>
         <div className="tag">{session ? `seat: ${session.seat.toUpperCase()} · seed ${session.seed}` : 'not yet convened'}</div>
       </div>
 

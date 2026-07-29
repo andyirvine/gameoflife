@@ -58,7 +58,7 @@ function Diagnosis({ s, lines, onNext }: { s: Snap; lines: string[]; onNext: () 
         {lines.map((l, i) => <p key={i} className={i === 0 ? 'lead' : 'dim'}>{l}</p>)}
         <div className="committray">
           <div className="dim">The world will not wait for you.</div>
-          <button className="act" onClick={onNext}>THE WORLD MOVES ▸</button>
+          <button className="act" onClick={onNext}>NEXT ▸</button>
         </div>
       </div>
     </>
@@ -68,14 +68,14 @@ function Diagnosis({ s, lines, onNext }: { s: Snap; lines: string[]; onNext: () 
 function Events({ s, onNext }: { s: Snap; onNext: () => void }) {
   return (
     <>
-      <Header tag={`ROUND ${s.round} · PHASE I`} title="THE WORLD MOVES" sub="Two decks resolve. You do not get a say." />
+      <Header tag={`ROUND ${s.round} · PHASE I`} title="NEWSFLASH" sub="" />
       <div className="mb">
-        <div className="dim" style={{ letterSpacing: 2, fontSize: 10 }}>THE WORLD DECK TURNS —</div>
+        <div className="dim" style={{ letterSpacing: 2, fontSize: 10 }}>Political Events</div>
         <div className={`card ${s.worldCard.tone}`} style={{ marginTop: 6 }}>
           <div className="nm" style={{ fontSize: 14 }}>{s.worldCard.name}</div>
           <div className="fl">{s.worldCard.flavor}</div>
         </div>
-        <div className="dim" style={{ letterSpacing: 2, fontSize: 10, marginTop: 12 }}>THE EVENTS DECK ROLLS —</div>
+        <div className="dim" style={{ letterSpacing: 2, fontSize: 10, marginTop: 12 }}>Major Global Events</div>
         {s.events.length === 0 && <p className="dim" style={{ marginTop: 6 }}>The world holds its breath. No physical shocks this round — but the odds only ever worsen.</p>}
         {s.events.map((e, i) => (
           <div key={i} className={`card ${e.feedback ? 'feedback' : 'hostile'}`} style={{ marginTop: 6 }}>
@@ -171,7 +171,7 @@ function Resolution({ s, onNext, last }: { s: Snap; onNext: () => void; last: bo
   const c = s.lastConsequence!
   return (
     <>
-      <Header tag={`ROUND ${c.round} RESOLVES · ${c.year}`} title="THE RECKONING" sub="Political cost is paid now. Planetary consequence lands on its own schedule." />
+      <Header tag={`ROUND ${c.round} RESOLVES · ${c.year}`} title="YOUR POLICIES LAND" sub="" />
       <div className="mb">
         <div className="dim" style={{ letterSpacing: 2, fontSize: 10 }}>AROUND THE CABINET —</div>
         {c.playerMoves.length > 0
