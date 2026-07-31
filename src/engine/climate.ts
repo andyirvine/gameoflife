@@ -15,11 +15,12 @@ import type { PlanetState } from './types.ts'
 const YEARS_PER_ROUND = 2
 
 // --- Temperature ---
-const BASE_LONGLIVED_TEMP = 0.95        // °C, the CO2/long-lived share of the 1.3 baseline
+const BASE_LONGLIVED_TEMP = 1.15        // °C, the CO2/long-lived share of the 1.5 baseline
 const TCRE_SLOPE = 0.00052              // °C per GtCO2e cumulatively emitted since 2026
 const METHANE_NATURAL = 700             // ppb, roughly pre-industrial
 const SHORTLIVED_COEF = 0.0002846       // °C per ppb of methane above natural
-//   check: 0.95 + 0.0002846*(1930-700) = 0.95 + 0.35 = 1.30 at baseline. good.
+//   check: 1.15 + 0.0002846*(1930-700) = 1.15 + 0.35 = 1.50 at baseline (Copernicus/WMO put
+//   single calendar years 2023-2024 at ~1.48-1.55°C above pre-industrial).
 
 // --- CO2 accumulation ---
 const PPM_PER_GT_ROUND = 0.12           // ppm added per GtCO2e of annual emissions, per round
