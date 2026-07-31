@@ -25,6 +25,9 @@ export type AiDecision = {
   move: Committed | null       // the minister's own-domain commitment, or nothing
   declaration: string          // phase-3 plain-language line
   refusedAggressive: boolean   // declined an aggressive tier it otherwise wanted
+  // Set only when move is null: why the minister held, for anything that wants to narrate
+  // it structurally rather than re-parsing the declaration text.
+  holdReason: 'protecting-standing' | 'no-good-option' | null
 }
 
 const SEVERITIES: Severity[] = ['light', 'moderate', 'aggressive']
@@ -127,9 +130,13 @@ export function decide(
         move: null,
         declaration: refusalLine(minister, wantedButUnsafeAggressive.policy, null),
         refusedAggressive: true,
+        holdReason: 'protecting-standing',
       }
     }
-    return { move: null, declaration: idleLine(minister, healNeed), refusedAggressive: false }
+    return {
+      move: null, declaration: idleLine(minister, healNeed), refusedAggressive: false,
+      holdReason: healNeed > 0.4 ? 'protecting-standing' : 'no-good-option',
+    }
   }
 
   const move: Committed = { policyId: best.policy.id, severity: best.severity, by: minister.portfolio }
@@ -140,11 +147,11 @@ export function decide(
     return {
       move,
       declaration: refusalLine(minister, wantedButUnsafeAggressive.policy, { policy: best.policy, severity: best.severity }),
-      refusedAggressive: true,
+      refusedAggressive: true, holdReason: null,
     }
   }
 
-  return { move, declaration: commitLine(minister, best.policy, best.severity, best.selfCost), refusedAggressive: false }
+  return { move, declaration: commitLine(minister, best.policy, best.severity, best.selfCost), refusedAggressive: false, holdReason: null }
 }
 
 // --- Templated phase-3 declarations ---

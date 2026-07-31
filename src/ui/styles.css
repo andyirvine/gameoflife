@@ -281,6 +281,18 @@ button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
 .advisor p:first-child::first-line { font-weight: 600; }
 .card .nm { display: block; }
 
+/* ---------- cabinet declares beat ---------- */
+.cab-row { border-top: 1px dashed var(--line); padding: 7px 0; animation: cardIn 0.3s ease both; }
+.cab-row:first-of-type { border-top: none; }
+.cab-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.cab-head b { color: var(--ink); font-size: 12px; }
+.cab-move { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; font-size: 11px; }
+.cab-badge { font-size: 9px; letter-spacing: 1px; border: 1px solid currentColor; padding: 1px 5px; flex: 0 0 auto; }
+.cab-badge.cab-hold { color: var(--ink-dim); }
+.cab-policy { color: var(--ink); }
+.cab-refused { font-size: 10px; }
+.cab-decl { color: var(--ink-dim); font-style: italic; margin: 3px 0 0; font-size: 11px; }
+
 /* intro tabs + how-to */
 .introtabs { display: flex; gap: 8px; margin-top: 12px; }
 .introtabs button { font-family: var(--mono); background: transparent; color: var(--ink-dim); border: 1px solid var(--line); padding: 5px 14px; letter-spacing: 1px; font-size: 10px; cursor: pointer; }

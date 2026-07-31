@@ -5,7 +5,8 @@ import type { Committed, DeathChannel, PortfolioId } from '../engine/types.ts'
 
 const bn = (m: number) => (m / 1000).toFixed(2)
 const CH: DeathChannel[] = ['heat', 'food', 'displacement', 'disaster', 'conflict']
-type Stage = 'diagnosis' | 'events' | 'options' | 'resolution'
+type Stage = 'diagnosis' | 'events' | 'cabinet' | 'options' | 'resolution'
+const STAGES: Stage[] = ['diagnosis', 'events', 'cabinet', 'options', 'resolution']
 
 export function Theatre({ session, onCommit, onEpilogue }: { session: Session; onCommit: (m: Committed[]) => void; onEpilogue: () => void }) {
   const [stage, setStage] = useState<Stage>('diagnosis')
@@ -17,18 +18,20 @@ export function Theatre({ session, onCommit, onEpilogue }: { session: Session; o
     if (stage === 'resolution') {
       if (session.phase === 'epilogue') { onEpilogue(); return }
       setStage('diagnosis')
-    } else setStage(stage === 'diagnosis' ? 'events' : stage === 'events' ? 'options' : 'resolution')
+      return
+    }
+    setStage(STAGES[STAGES.indexOf(stage) + 1]!)
   }
 
-  const stages: Stage[] = ['diagnosis', 'events', 'options', 'resolution']
   return (
     <div className="modal theatre rail">
       <div className="beatdots">
-        {stages.map((st) => <span key={st} className={`dot${st === stage ? ' on' : ''}${stages.indexOf(st) < stages.indexOf(stage) ? ' done' : ''}`} />)}
+        {STAGES.map((st) => <span key={st} className={`dot${st === stage ? ' on' : ''}${STAGES.indexOf(st) < STAGES.indexOf(stage) ? ' done' : ''}`} />)}
       </div>
       <div className="stage-anim" key={stage}>
         {stage === 'diagnosis' && <Diagnosis s={s} lines={session.diagnosis()} onNext={advance} />}
         {stage === 'events' && <Events s={s} onNext={advance} />}
+        {stage === 'cabinet' && <CabinetBeat s={s} onNext={advance} />}
         {stage === 'options' && (
           <Options session={session} s={s} advisors={session.briefing()} selected={selected} setSelected={setSelected} onCommit={commit} />
         )}
@@ -89,6 +92,64 @@ function Events({ s, onNext }: { s: Snap; onNext: () => void }) {
             {s.pulledForward.map((p, i) => <div key={i} className="dim" style={{ fontSize: 11 }}>{p}</div>)}
           </div>
         )}
+        <div className="committray">
+          <div className="dim">Before you speak, hear what the rest of the cabinet intends.</div>
+          <button className="act" onClick={onNext}>THE CABINET DECLARES ▸</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+const PRIORITY_LABEL: Record<'mitigation' | 'relief' | 'resilience', string> = {
+  mitigation: 'MITIGATION', relief: 'RELIEF', resilience: 'RESILIENCE',
+}
+
+function CabinetBeat({ s, onNext }: { s: Snap; onNext: () => void }) {
+  const records = s.cabinetRecords
+  const acted = records.filter((r) => r.move)
+  const held = records.filter((r) => !r.move)
+  const heldForStanding = held.filter((r) => r.holdReason === 'protecting-standing')
+  const tally = (p: 'mitigation' | 'relief' | 'resilience') => acted.filter((r) => r.move!.priority === p).length
+
+  return (
+    <>
+      <Header
+        tag={`ROUND ${s.round} · PHASE III`}
+        title="THE CABINET DECLARES"
+        sub="Non-binding, but this is where the round's real shape gets set."
+      />
+      <div className="mb" style={{ maxHeight: '64vh', overflow: 'auto' }}>
+        <p className="dim" style={{ marginBottom: 10 }}>
+          {acted.length ? `${acted.length} acting this round — ${(['mitigation', 'relief', 'resilience'] as const).filter((p) => tally(p) > 0).map((p) => `${tally(p)} ${p}`).join(', ')}.` : 'Nobody else is acting this round.'}
+          {' '}{held.length > 0 && `${held.length} holding${heldForStanding.length ? ` (${heldForStanding.length} protecting their own standing)` : ''}.`}
+        </p>
+        {records.map((r) => (
+          <div key={r.portfolio} className="cab-row">
+            <div className="cab-head">
+              <b>{SEAT_NAME[r.portfolio]}</b>
+              <span className="dim">{r.health.toFixed(1)}/10 · {r.doctrine}</span>
+            </div>
+            {r.move ? (
+              <div className="cab-move">
+                <span className="cab-badge" style={{ color: `var(--${r.move.priority === 'mitigation' ? 'cyan' : r.move.priority === 'relief' ? 'amber' : 'green'})` }}>
+                  {PRIORITY_LABEL[r.move.priority]}
+                </span>
+                <span className="cab-policy">{r.move.policyName} ({r.move.severity})</span>
+                <span className="dim">lags {r.move.lag} → lands round {r.move.landsRound}{r.move.landsRound > 12 ? ' (too late)' : ''}</span>
+                {r.refused && <span className="warn cab-refused">refused the deeper cut it wanted</span>}
+              </div>
+            ) : (
+              <div className="cab-move">
+                <span className="cab-badge cab-hold">HOLDING</span>
+                <span className="dim">
+                  {r.holdReason === 'protecting-standing' ? 'protecting political standing this round' : 'nothing on the table was worth the cost'}
+                </span>
+              </div>
+            )}
+            <p className="cab-decl">"{r.declaration}"</p>
+          </div>
+        ))}
         <div className="committray">
           <div className="dim">The cabinet turns to you.</div>
           <button className="act" onClick={onNext}>TAKE THE FLOOR ▸</button>

@@ -101,6 +101,16 @@ export type MenuTier = {
 }
 
 export type Advisor = { name: string; role: string; lines: string[] }
+// What a colleague did this round, or why they held — for the "cabinet declares" beat.
+export type CabinetRecord = {
+  portfolio: PortfolioId
+  health: number
+  doctrine: string
+  declaration: string
+  move: { policyName: string; severity: Severity; lag: number; landsRound: number; priority: 'mitigation' | 'relief' | 'resilience' } | null
+  refused: boolean
+  holdReason: 'protecting-standing' | 'no-good-option' | null
+}
 // One point on a trajectory graph — either something that actually happened (history) or a
 // forward projection assuming no further commitments land.
 export type TrajectoryPoint = { round: number; year: number; temp: number; deaths: number; unresettled: number }
@@ -137,6 +147,7 @@ export class Session {
   private pulledForward: string[] = []
   private aiMoves: Committed[] = []
   private declarations: string[] = []
+  private cabinetRecords: CabinetRecord[] = []
 
   // records
   history: TrajectoryPoint[] = []
@@ -168,12 +179,23 @@ export class Session {
     this.worldCard = drawWorldCard(this.instability, this.rng)
     this.aiMoves = []
     this.declarations = []
+    this.cabinetRecords = []
     for (const p of PORTFOLIOS) {
       if (p === this.seat) continue
       const m = ministerOf(this.cabinet, p)
       const d = decide(m, this.forecasts[p], this.planet, budgetFor(m))
       this.declarations.push(`${SEAT_NAME[p].split(' ')[0]}: ${d.declaration.replace(/^[^:]+:\s*/, '')}`)
       if (d.move) this.aiMoves.push(d.move)
+      const tier = d.move ? getTier(d.move.policyId, d.move.severity) : null
+      this.cabinetRecords.push({
+        portfolio: p, health: m.politicalHealth, doctrine: m.doctrine,
+        declaration: d.declaration.replace(/^[^:]+:\s*/, ''),
+        move: d.move && tier ? {
+          policyName: getPolicy(d.move.policyId).name, severity: d.move.severity,
+          lag: tier.lag, landsRound: this.round + tier.lag, priority: dominantPriority(tier),
+        } : null,
+        refused: d.refusedAggressive, holdReason: d.holdReason,
+      })
     }
     // stash the fired events' outcome for commit
     this._ev = ev
@@ -439,6 +461,7 @@ export class Session {
       worldCard: { name: this.worldCard.name, tone: this.worldCard.tone, flavor: this.worldCard.flavor },
       pulledForward: this.pulledForward,
       declarations: this.declarations,
+      cabinetRecords: this.cabinetRecords,
       pipeline: this.pipelineView(),
       tradeLedger: this.tradeLedger,
       lastConsequence: this.lastConsequence,
@@ -484,6 +507,18 @@ export class Session {
 // --- helpers ---
 function band(h: number): string {
   return h >= 8 ? 'STRONG' : h >= 5 ? 'stable' : h >= 3 ? 'FRAGILE' : h >= 1 ? 'CRITICAL' : 'FALLEN'
+}
+
+// Which of the three broad strategic lanes a tier mainly serves — for narrating a colleague's
+// move without re-deriving the full impact breakdown used elsewhere.
+function dominantPriority(tier: import('../engine/types.ts').PolicyTier): 'mitigation' | 'relief' | 'resilience' {
+  const e = tier.effects
+  const mitigation = Math.max(0, -((e.coalitionEmissions ?? 0) + (e.nonMemberEmissions ?? 0))) + Math.max(0, -(e.methane ?? 0)) / 200
+  const relief = Math.max(0, -(e.foodInsecure ?? 0))
+  const resilience = (tier.adaptationValue ?? 0) + (tier.resilienceValue ?? 0) + (tier.resettleValue ?? 0)
+  if (relief >= mitigation && relief >= resilience) return 'relief'
+  if (resilience >= mitigation && resilience >= relief) return 'resilience'
+  return 'mitigation'
 }
 
 function effectSummary(tier: import('../engine/types.ts').PolicyTier): string {
