@@ -30,6 +30,10 @@ export const POLICY_COPY: Record<string, PolicyCopy> = {
     summary: 'Insulate buildings and upgrade industry to waste less energy.',
     rationale: 'A quiet, low-cost cut that also builds a little adaptation. Rarely controversial, rarely enough on its own.',
   },
+  'energy-price-relief': {
+    summary: 'Subsidise household energy bills to blunt the price backlash.',
+    rationale: 'The only lever that answers being blamed first for every price shock. It buys your standing back, and it does nothing for the planet — you will feel that trade every time you reach for it.',
+  },
 
   // ---- Agriculture & Land ----
   'methane-livestock': {

@@ -98,6 +98,19 @@ export const POLICIES: Policy[] = [
       tier('aggressive', { cost: 5, lag: 2, effects: { coalitionEmissions: -2.8 }, political: { energy: 2 }, adaptationValue: 9 }),
     ],
   ),
+  policy(
+    'energy-price-relief', 'Energy price relief', 'energy',
+    ['relief'], [],
+    [
+      // Trades planetary progress for political recovery — the same shape as Treasury's
+      // dividend and Resilience's famine relief. Energy's structural weakness is being
+      // blamed first for price shocks; this is the lever that answers it, and it should
+      // feel bad every time, same as the others.
+      tier('light', { cost: 1, lag: 1, effects: { coalitionEmissions: 0.3 }, political: { energy: -2 } }),
+      tier('moderate', { cost: 3, lag: 1, effects: { coalitionEmissions: 0.8 }, political: { energy: -3 } }),
+      tier('aggressive', { cost: 5, lag: 1, effects: { coalitionEmissions: 1.5 }, political: { energy: -4 } }),
+    ],
+  ),
 
   // ------------------------------------------------------------ AGRICULTURE
   policy(
