@@ -126,7 +126,7 @@ export function budgetFor(m: Minister): number {
 // A tier's point cost for a specific minister, after doctrine discounts. Uses the best
 // (cheapest) multiplier among the policy's tags, so a policy that is both mitigation and
 // adaptation gets whichever the doctrine favours.
-export function pointCostFor(m: Minister, policy: Policy, tier: PolicyTier): number {
+export function pointCostFor(m: Pick<Minister, 'doctrine'>, policy: Policy, tier: PolicyTier): number {
   const mults = DOCTRINE_MULTIPLIERS[m.doctrine]
   let best = 1
   let matched = false
@@ -142,7 +142,7 @@ export function pointCostFor(m: Minister, policy: Policy, tier: PolicyTier): num
 
 // Is this policy legal for this minister right now? A succession restriction forbids any
 // policy carrying the locked flag until the restriction expires.
-export function isLegalFor(m: Minister, policy: Policy): boolean {
+export function isLegalFor(m: Pick<Minister, 'restrictions'>, policy: Policy): boolean {
   for (const r of m.restrictions) {
     if (r.forbidsFlag && policy.flags.includes(r.forbidsFlag)) return false
   }
