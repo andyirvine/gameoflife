@@ -20,8 +20,18 @@ function send(ws: WebSocket, msg: OutMessage) {
   ws.send(JSON.stringify(msg))
 }
 
+// Fly's proxy (and other hops in between) can silently drop a quiet WebSocket without ever
+// sending a close frame, leaving the client stuck on a socket that still reads as OPEN and
+// never fires its reconnect logic. A ping/pong heartbeat forces that out into the open: any
+// connection that misses a beat gets terminated, so the client's existing onclose→retry path
+// actually runs instead of hanging silently.
+const HEARTBEAT_MS = 20_000
+const alive = new WeakMap<WebSocket, boolean>()
+
 wss.on('connection', (ws) => {
   clients.add(ws)
+  alive.set(ws, true)
+  ws.on('pong', () => alive.set(ws, true))
   send(ws, { type: 'state', state: room.state() })
 
   ws.on('message', (raw) => {
@@ -54,8 +64,22 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     clients.delete(ws)
+    alive.delete(ws)
     // Deliberately NOT freeing the seat here — manual-only release, per the agreed design.
   })
 })
+
+const heartbeat = setInterval(() => {
+  for (const ws of clients) {
+    if (alive.get(ws) === false) {
+      ws.terminate()
+      continue
+    }
+    alive.set(ws, false)
+    ws.ping()
+  }
+}, HEARTBEAT_MS)
+
+wss.on('close', () => clearInterval(heartbeat))
 
 console.log(`Game of Life multiplayer room listening on ws://localhost:${PORT}`)
