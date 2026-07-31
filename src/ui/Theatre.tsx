@@ -1,19 +1,32 @@
 import { useState } from 'react'
 import { Session, SEAT_NAME } from './session.ts'
-import type { MenuTier } from './session.ts'
+import type { CabinetRecord, MenuTier } from './session.ts'
 import type { Committed, DeathChannel, PortfolioId } from '../engine/types.ts'
 
 const bn = (m: number) => (m / 1000).toFixed(2)
 const CH: DeathChannel[] = ['heat', 'food', 'displacement', 'disaster', 'conflict']
-type Stage = 'diagnosis' | 'events' | 'cabinet' | 'options' | 'resolution'
-const STAGES: Stage[] = ['diagnosis', 'events', 'cabinet', 'options', 'resolution']
+type Stage = 'diagnosis' | 'events' | 'options' | 'cabinet' | 'resolution'
+const STAGES: Stage[] = ['diagnosis', 'events', 'options', 'cabinet', 'resolution']
+
+// What the cabinet beat needs, frozen at the moment you commit — the AI's moves are decided
+// at the top of the round (independent of your choice), but committing immediately advances
+// the session to the next round internally, which would overwrite them before this beat gets
+// to render. Freezing this snapshot is what lets the reveal show THIS round's cabinet, not
+// next round's.
+type FrozenCabinet = { round: number; year: number; records: CabinetRecord[] }
 
 export function Theatre({ session, onCommit, onEpilogue }: { session: Session; onCommit: (m: Committed[]) => void; onEpilogue: () => void }) {
   const [stage, setStage] = useState<Stage>('diagnosis')
   const [selected, setSelected] = useState<Committed[]>([])
+  const [frozenCabinet, setFrozenCabinet] = useState<FrozenCabinet | null>(null)
   const s = session.snapshot()
 
-  const commit = () => { onCommit(selected); setSelected([]); setStage('resolution') }
+  const commit = () => {
+    setFrozenCabinet({ round: s.round, year: s.year, records: s.cabinetRecords })
+    onCommit(selected)
+    setSelected([])
+    setStage('cabinet')
+  }
   const advance = () => {
     if (stage === 'resolution') {
       if (session.phase === 'epilogue') { onEpilogue(); return }
@@ -31,10 +44,10 @@ export function Theatre({ session, onCommit, onEpilogue }: { session: Session; o
       <div className="stage-anim" key={stage}>
         {stage === 'diagnosis' && <Diagnosis s={s} lines={session.diagnosis()} onNext={advance} />}
         {stage === 'events' && <Events s={s} onNext={advance} />}
-        {stage === 'cabinet' && <CabinetBeat s={s} onNext={advance} />}
         {stage === 'options' && (
           <Options session={session} s={s} advisors={session.briefing()} selected={selected} setSelected={setSelected} onCommit={commit} />
         )}
+        {stage === 'cabinet' && frozenCabinet && <CabinetBeat data={frozenCabinet} onNext={advance} />}
         {stage === 'resolution' && s.lastConsequence && <Resolution s={s} onNext={advance} last={session.phase === 'epilogue'} />}
       </div>
     </div>
@@ -93,8 +106,8 @@ function Events({ s, onNext }: { s: Snap; onNext: () => void }) {
           </div>
         )}
         <div className="committray">
-          <div className="dim">Before you speak, hear what the rest of the cabinet intends.</div>
-          <button className="act" onClick={onNext}>THE CABINET DECLARES ▸</button>
+          <div className="dim">The cabinet turns to you.</div>
+          <button className="act" onClick={onNext}>TAKE THE FLOOR ▸</button>
         </div>
       </div>
     </>
@@ -105,8 +118,8 @@ const PRIORITY_LABEL: Record<'mitigation' | 'relief' | 'resilience', string> = {
   mitigation: 'MITIGATION', relief: 'RELIEF', resilience: 'RESILIENCE',
 }
 
-function CabinetBeat({ s, onNext }: { s: Snap; onNext: () => void }) {
-  const records = s.cabinetRecords
+function CabinetBeat({ data, onNext }: { data: { round: number; year: number; records: CabinetRecord[] }; onNext: () => void }) {
+  const records = data.records
   const acted = records.filter((r) => r.move)
   const held = records.filter((r) => !r.move)
   const heldForStanding = held.filter((r) => r.holdReason === 'protecting-standing')
@@ -115,9 +128,9 @@ function CabinetBeat({ s, onNext }: { s: Snap; onNext: () => void }) {
   return (
     <>
       <Header
-        tag={`ROUND ${s.round} · PHASE III`}
-        title="THE CABINET DECLARES"
-        sub="Non-binding, but this is where the round's real shape gets set."
+        tag={`ROUND ${data.round} · PHASE V`}
+        title="THE CABINET REVEALS"
+        sub="Your own commitment is already locked in — this is what the rest of the table did at the same time."
       />
       <div className="mb" style={{ maxHeight: '64vh', overflow: 'auto' }}>
         <p className="dim" style={{ marginBottom: 10 }}>
@@ -151,8 +164,8 @@ function CabinetBeat({ s, onNext }: { s: Snap; onNext: () => void }) {
           </div>
         ))}
         <div className="committray">
-          <div className="dim">The cabinet turns to you.</div>
-          <button className="act" onClick={onNext}>TAKE THE FLOOR ▸</button>
+          <div className="dim">Every commitment is in.</div>
+          <button className="act" onClick={onNext}>SEE HOW IT LANDS ▸</button>
         </div>
       </div>
     </>
@@ -221,7 +234,7 @@ function Options({ session, s, advisors, selected, setSelected, onCommit }: {
             {selected.length === 0 && <span className="dim">holding — a round of recovery. The counter rises regardless.</span>}
             {selected.map((m, i) => <span key={i} className="chip" onClick={() => remove(i)}>{m.policyId.split('-')[0]} {m.severity[0]} ✕</span>)}
           </div>
-          <button className="act" onClick={onCommit}>{selected.length ? 'COMMIT & RESOLVE ▸' : 'HOLD ▸'}</button>
+          <button className="act" onClick={onCommit}>{selected.length ? 'COMMIT ▸' : 'HOLD ▸'}</button>
         </div>
       </div>
     </>
