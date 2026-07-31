@@ -4,9 +4,10 @@ import { Intro } from './Intro.tsx'
 import { Dashboard } from './Dashboard.tsx'
 import { Theatre } from './Theatre.tsx'
 import { Epilogue } from './Epilogue.tsx'
+import { MultiplayerLobby } from './MultiplayerLobby.tsx'
 import type { PortfolioId } from '../engine/types.ts'
 
-type Screen = 'intro' | 'play' | 'epilogue'
+type Screen = 'intro' | 'play' | 'epilogue' | 'multiplayer'
 
 export function App() {
   const [screen, setScreen] = useState<Screen>('intro')
@@ -71,7 +72,8 @@ export function App() {
         </div>
       )}
 
-      {screen === 'intro' && <Intro onStart={start} />}
+      {screen === 'intro' && <Intro onStart={start} onMultiplayer={() => setScreen('multiplayer')} />}
+      {screen === 'multiplayer' && <MultiplayerLobby onExit={() => setScreen('intro')} />}
       {screen === 'epilogue' && session && <Epilogue data={session.epilogue()} onRestart={() => { setSession(null); setScreen('intro') }} />}
     </div>
   )

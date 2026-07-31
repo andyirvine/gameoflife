@@ -1,23 +1,10 @@
 import { WebSocketServer, type WebSocket } from 'ws'
-import { Room, type PendingMoves } from './room.ts'
-import type { PortfolioId } from '../engine/types.ts'
+import { Room } from './room.ts'
+import type { InMessage, OutMessage } from './protocol.ts'
 
 // The one-and-only room for this process ("I only need to run one instance at a time" — no
 // matchmaking, no multi-room registry).
 const room = new Room()
-
-// --- wire protocol ---
-// Client -> server messages.
-type InMessage =
-  | { type: 'claim-seat'; token: string; seat: PortfolioId; name: string }
-  | { type: 'leave-seat'; token: string }
-  | { type: 'commit-moves'; token: string; moves: PendingMoves }
-
-// Server -> client messages. Just one: the full room state, pushed to everyone after any
-// mutation. Simplest possible sync model — clients are thin mirrors, not co-authorities.
-type OutMessage =
-  | { type: 'state'; state: ReturnType<Room['state']> }
-  | { type: 'error'; error: string }
 
 const PORT = Number(process.env.PORT ?? 8787)
 const wss = new WebSocketServer({ port: PORT })

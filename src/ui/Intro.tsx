@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { PORTFOLIOS, SEAT_NAME, SEAT_WEAKNESS } from './session.ts'
 import type { PortfolioId } from '../engine/types.ts'
 
-export function Intro({ onStart }: { onStart: (seat: PortfolioId, seed: number) => void }) {
+export function Intro({ onStart, onMultiplayer }: { onStart: (seat: PortfolioId, seed: number) => void; onMultiplayer: () => void }) {
   const [seat, setSeat] = useState<PortfolioId | ''>('')
   const [seed] = useState(() => Math.floor(Math.random() * 1e6))
   const [view, setView] = useState<'briefing' | 'howto'>('briefing')
@@ -47,6 +47,10 @@ export function Intro({ onStart }: { onStart: (seat: PortfolioId, seed: number) 
                 {!seat && <span className="warn"> · pick a seat above to convene</span>}
               </div>
               <button className="act" disabled={!seat} onClick={() => seat && onStart(seat, seed)}>CONVENE CABINET ▸</button>
+            </div>
+            <div className="committray" style={{ marginTop: 8 }}>
+              <div className="dim">Got five friends? Take all six seats yourselves.</div>
+              <button className="ghost" onClick={onMultiplayer}>MULTIPLAYER — 6 PLAYERS ▸</button>
             </div>
           </div>
         ) : (

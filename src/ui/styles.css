@@ -233,6 +233,12 @@ button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
 .seat.on { border-color: var(--green); background: #10261a; }
 .seat b { color: var(--cyan); }
 .seat span { color: var(--ink-dim); display: block; }
+.seat.mp-taken { opacity: 0.5; cursor: default; }
+.mp-name-input {
+  font-family: var(--mono); background: var(--panel-2); color: var(--ink);
+  border: 1px solid var(--line); padding: 6px 10px; width: 100%; font-size: 12px;
+}
+.mp-name-input:focus { outline: none; border-color: var(--green); }
 
 /* theatre: modal beats played OVER the live dashboard (lighter scrim so stats read through) */
 .theatre-scrim {
