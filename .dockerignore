@@ -1,0 +1,7 @@
+node_modules
+dist
+.git
+.claude
+docs
+COPY.md
+README.md

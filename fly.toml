@@ -1,0 +1,26 @@
+# Fly.io config for the multiplayer WebSocket server ONLY (the static UI stays on Cloudflare).
+#
+# `app` must be a name that's globally unique across ALL Fly users — pick your own and change
+# it below AND in every `fly` command in the walkthrough. "lhr" (London) is the default region;
+# change it to whatever's closest to your players.
+app = "CHANGE-ME-gameoflife-mp"
+primary_region = "lhr"
+
+[build]
+
+[env]
+  PORT = "8787"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  # This holds ONE in-memory game room with no external persistence (by design — see
+  # src/server/room.ts). If Fly scales the machine to zero between requests, the room and
+  # everyone's seats are gone. These two settings keep exactly one instance always running.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
