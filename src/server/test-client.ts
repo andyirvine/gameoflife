@@ -84,13 +84,13 @@ async function main() {
   check('claiming an already-held seat is rejected', gotError)
 
   // --- gating: 5 of 6 commit, round must NOT advance ---
-  for (let i = 0; i < 5; i++) clients[i]!.send({ type: 'commit-moves', token: clients[i]!.token, moves: { note: `move-${i}` } })
+  for (let i = 0; i < 5; i++) clients[i]!.send({ type: 'commit-moves', token: clients[i]!.token, moves: [] })
   await new Promise((r) => setTimeout(r, 300))
   check('5 committed, round still 1 (gated)', clients[0]!.state!.round === 1)
   check('committed count is 5', clients[0]!.state!.committed.length === 5)
 
   // --- the 6th commits, round must advance and the buffer resets ---
-  clients[5]!.send({ type: 'commit-moves', token: clients[5]!.token, moves: { note: 'move-5' } })
+  clients[5]!.send({ type: 'commit-moves', token: clients[5]!.token, moves: [] })
   const afterRound = await clients[0]!.untilState((s) => s.round === 2)
   check('all 6 committed -> round advanced to 2', afterRound.round === 2)
   check('commit buffer reset for the new round', afterRound.committed.length === 0)

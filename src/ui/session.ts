@@ -6,13 +6,14 @@ import { loadOpeningState } from '../engine/opening-state.ts'
 import { stepClimate, initAccumulators, type ClimateAccumulators } from '../engine/climate.ts'
 import { initStocks, stepStocks } from '../engine/stocks.ts'
 import { initDeathModel, resolveDeaths, type DeathModelState } from '../engine/death.ts'
-import { getTier, getPolicy, policiesByDomain } from '../engine/policies.ts'
+import { getTier, getPolicy } from '../engine/policies.ts'
 import { policyCopy } from '../engine/policy-copy.ts'
 import { initPipeline, enact, landDue, type Pipeline } from '../engine/pipeline.ts'
 import {
   initCabinet, resolveRound, budgetFor, pointCostFor, isLegalFor, cabinetInstability, ministerOf,
   type Committed, type ExternalPolitical, type SuccessionEvent,
 } from '../engine/political.ts'
+import { buildMenu, type MenuTier } from '../engine/menu.ts'
 import { rollEvents, applyEvents, combineShocks, type EventCard } from '../engine/events-deck.ts'
 import { drawWorldCard, type WorldCard } from '../engine/world-deck.ts'
 import { assignForecasts, projectForecast, vindicatedSeat, type ForecastModel } from '../engine/forecast.ts'
@@ -89,16 +90,7 @@ const CAPITAL_TONE: Record<'strong' | 'stable' | 'fragile', string> = {
   fragile: 'You have some room left, but spend it carefully.',
 }
 
-export type MenuTier = {
-  policyId: string; policyName: string; summary: string; severity: Severity
-  cost: number; lag: number; effect: string; selfCost: number
-  spill: { seat: PortfolioId; amount: number; resultHealth: number }[]
-  // numeric impact, so advisors can reason about tiers without re-parsing the display string
-  impact: { mitigation: number; relief: number; resilience: number }
-  topples: boolean  // would this tier, on its own, fell a colleague already near the edge?
-  selected: boolean  // is this exact tier the one currently chosen for its policy this round?
-  disabled: boolean  // restricted, superseded by a different tier of the same policy, or unaffordable
-}
+export type { MenuTier }
 
 export type Advisor = { name: string; role: string; lines: string[] }
 // What a colleague did this round, or why they held — for the "cabinet declares" beat.
@@ -211,39 +203,8 @@ export class Session {
   // The currently-selected tier is never disabled, so it can always be toggled back off.
   menu(selected: Committed[]): MenuTier[] {
     const you = ministerOf(this.cabinet, this.seat)
-    const budget = budgetFor(you)
-    const spentTotal = selected.reduce((a, s) => a + pointCostFor(you, getPolicy(s.policyId), getTier(s.policyId, s.severity)), 0)
-    const sevs: Severity[] = ['light', 'moderate', 'aggressive']
-    const out: MenuTier[] = []
-    for (const policy of policiesByDomain(this.seat)) {
-      const legal = isLegalFor(you, policy)
-      const pickedSeverity = selected.find((s) => s.policyId === policy.id)?.severity
-      for (let i = 0; i < 3; i++) {
-        const tier = policy.tiers[i]!
-        const severity = sevs[i]!
-        const cost = pointCostFor(you, policy, tier)
-        const isSelected = pickedSeverity === severity
-        const affordable = isSelected || (budget - spentTotal) >= cost
-        const disabled = !legal || (pickedSeverity !== undefined && !isSelected) || !affordable
-        const spill = (Object.entries(tier.politicalCost) as [PortfolioId, number][])
-          .filter(([p, v]) => p !== this.seat && v !== 0)
-          .map(([p, v]) => ({ seat: p, amount: v, resultHealth: ministerOf(this.cabinet, p).politicalHealth - v }))
-        const e = tier.effects
-        const impact = {
-          mitigation: Math.max(0, -((e.coalitionEmissions ?? 0) + (e.nonMemberEmissions ?? 0))) + Math.max(0, -(e.methane ?? 0)) / 200,
-          relief: Math.max(0, -(e.foodInsecure ?? 0)),
-          resilience: (tier.adaptationValue ?? 0) + (tier.resilienceValue ?? 0) + (tier.resettleValue ?? 0),
-        }
-        out.push({
-          policyId: policy.id, policyName: policy.name, summary: policyCopy(policy.id).summary,
-          severity, cost, lag: tier.lag, effect: effectSummary(tier),
-          selfCost: tier.politicalCost[this.seat] ?? 0, spill, impact,
-          topples: spill.some((sp) => sp.resultHealth <= 0),
-          selected: isSelected, disabled,
-        })
-      }
-    }
-    return out
+    const healthOf = Object.fromEntries(PORTFOLIOS.map((p) => [p, ministerOf(this.cabinet, p).politicalHealth])) as Record<PortfolioId, number>
+    return buildMenu(this.seat, you, budgetFor(you), healthOf, selected)
   }
 
   budget(): number { return budgetFor(ministerOf(this.cabinet, this.seat)) }
@@ -521,22 +482,6 @@ function dominantPriority(tier: import('../engine/types.ts').PolicyTier): 'mitig
   return 'mitigation'
 }
 
-function effectSummary(tier: import('../engine/types.ts').PolicyTier): string {
-  const e = tier.effects
-  const parts: string[] = []
-  const add = (v: number | undefined, label: string, unit = '') => { if (v) parts.push(`${label} ${v > 0 ? '+' : ''}${v}${unit}`) }
-  add(e.coalitionEmissions, 'coalition CO₂', ' Gt')
-  add(e.nonMemberEmissions, 'non-member CO₂', ' Gt')
-  add(e.methane, 'CH₄', ' ppb')
-  add(e.foodInsecure, 'food', 'M')
-  add(e.displacedUnresettled, 'unresettled', 'M')
-  add(e.forestLossRate, 'forest', ' Mha')
-  add(e.wetlandRestored, 'wetland', '%')
-  if (tier.adaptationValue) parts.push(`+adapt ${tier.adaptationValue}`)
-  if (tier.resilienceValue) parts.push(`+resil ${tier.resilienceValue}`)
-  if (tier.resettleValue) parts.push(`resettle ${tier.resettleValue}M`)
-  return parts.join(', ') || 'no direct planetary effect'
-}
 function tradeLine(moves: Committed[], seat: PortfolioId, cabinet: Cabinet, round: number): string {
   if (moves.length === 0) return `R${round}: held — traded a round of action for recovery. The counter rose regardless.`
   const bought: string[] = []; let youPay = 0; const others: string[] = []

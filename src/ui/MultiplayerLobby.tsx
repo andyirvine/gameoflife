@@ -2,15 +2,16 @@ import { useState } from 'react'
 import { useRoom } from './net.ts'
 import { PORTFOLIOS } from '../server/room.ts'
 import { SEAT_NAME, SEAT_WEAKNESS } from './session.ts'
+import { MultiplayerGame } from './MultiplayerGame.tsx'
 
 const NAME_KEY = 'gol-mp-name'
 
-// Phase 2: live seat-claiming across however many browsers connect, wired to the real
-// multiplayer server. Once all six seats are claimed the room auto-starts (phase becomes
-// 'round' server-side) — this screen shows a plain placeholder for that instead of routing
-// into Dashboard/Theatre, which is Phase 3's job (wiring the real engine to the network).
+// Live seat-claiming across however many browsers connect, wired to the real multiplayer
+// server. Once all six seats are claimed the room auto-starts (phase becomes 'round'
+// server-side) and, once you hold a seat, this hands off entirely to MultiplayerGame.
 export function MultiplayerLobby({ onExit }: { onExit: () => void }) {
-  const { state, status, token, lastError, clearError, claimSeat, leaveSeat } = useRoom()
+  const room = useRoom()
+  const { state, status, token, lastError, clearError, claimSeat, leaveSeat } = room
   const [name, setName] = useState(() => localStorage.getItem(NAME_KEY) ?? '')
 
   const commitName = (v: string) => {
@@ -20,6 +21,10 @@ export function MultiplayerLobby({ onExit }: { onExit: () => void }) {
 
   const mySeat = state ? PORTFOLIOS.find((p) => state.seats[p]?.token === token) : undefined
   const claimedCount = state ? PORTFOLIOS.filter((p) => state.seats[p]).length : 0
+
+  if (state && state.phase !== 'lobby' && mySeat) {
+    return <MultiplayerGame state={state} mySeat={mySeat} seatState={room} />
+  }
 
   return (
     <div className="modal-scrim">
