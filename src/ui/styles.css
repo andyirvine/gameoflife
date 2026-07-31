@@ -147,6 +147,18 @@ a { color: var(--cyan); }
 .forecast td { color: var(--ink-dim); padding: 1px 0; }
 .forecast td:first-child { color: var(--ink); }
 
+.chart { margin: 8px 0; }
+.chart-title { color: var(--ink-dim); font-size: 10px; letter-spacing: 1.5px; margin-bottom: 2px; }
+.chart-svg { width: 100%; height: 52px; display: block; overflow: visible; }
+.chart-axis { stroke: var(--line); stroke-width: 0.5; vector-effect: non-scaling-stroke; }
+.chart-now { stroke: var(--ink-dim); stroke-width: 0.5; stroke-dasharray: 1.5,1.5; vector-effect: non-scaling-stroke; }
+.chart-threshold { stroke-width: 0.6; stroke-dasharray: 1,1.5; opacity: 0.6; vector-effect: non-scaling-stroke; }
+.chart-legend { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; }
+.chart-legend-row { display: flex; align-items: center; gap: 5px; font-size: 10px; }
+.chart-swatch { width: 7px; height: 7px; display: inline-block; flex: 0 0 auto; }
+.chart-legend-label { color: var(--ink); width: 66px; flex: 0 0 auto; }
+.chart-legend-val { color: var(--ink-dim); }
+
 /* ---------- pipeline ---------- */
 .pipe { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 8px; }
 .pipe .when { color: var(--cyan); }

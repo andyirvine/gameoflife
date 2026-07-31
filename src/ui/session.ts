@@ -101,6 +101,9 @@ export type MenuTier = {
 }
 
 export type Advisor = { name: string; role: string; lines: string[] }
+// One point on a trajectory graph — either something that actually happened (history) or a
+// forward projection assuming no further commitments land.
+export type TrajectoryPoint = { round: number; year: number; temp: number; deaths: number; unresettled: number }
 type EventPlea = { priority: 'mitigation' | 'relief' | 'resilience'; severity: number; text: string }
 export type PipelineItem = { policyName: string; severity: Severity; landsRound: number; eta: string; by: PortfolioId; mine: boolean }
 export type Consequence = {
@@ -136,6 +139,7 @@ export class Session {
   private declarations: string[] = []
 
   // records
+  history: TrajectoryPoint[] = []
   ledger: DeathLedgerEntry[] = []
   successions: SuccessionEvent[] = []
   tradeLedger: string[] = []
@@ -152,6 +156,7 @@ export class Session {
     this.forecasts = assignForecasts(this.rng.fork(99))
     this.instability = cabinetInstability(this.cabinet)
     this.peakTemp = this.planet.tempAnomaly
+    this.history.push({ round: 0, year: this.planet.year, temp: this.planet.tempAnomaly, deaths: this.planet.cumulativeDeaths, unresettled: this.planet.displacedUnresettled })
     this.beginRound()
   }
 
@@ -278,6 +283,8 @@ export class Session {
     }
     for (const s of pol.successions) if (yourSpill.has(s.portfolio)) { this.did.toppled++; this.tradeLedger[this.round - 1] += `  ✖ cost ${SEAT_NAME[s.portfolio].split(' ')[0]} their office` }
 
+    this.history.push({ round: this.round, year: this.planet.year, temp: this.planet.tempAnomaly, deaths: this.planet.cumulativeDeaths, unresettled: this.planet.displacedUnresettled })
+
     if (this.round >= 12) { this.settle(); this.phase = 'epilogue' }
     else { this.round++; this.beginRound() }
   }
@@ -294,7 +301,33 @@ export class Session {
       this.deathModel = resolved.model
       this.ledger.push(resolved.entry)
       this.planet = { ...this.planet, cumulativeDeaths: resolved.entry.cumulative }
+      this.history.push({ round: 12 + s, year: this.planet.year, temp: this.planet.tempAnomaly, deaths: this.planet.cumulativeDeaths, unresettled: this.planet.displacedUnresettled })
     }
+  }
+
+  // Forward projection for the forecast graphs: "if nothing more is committed" — climate and
+  // death-model stocks carried forward with no new policy and no events, matching the
+  // assumption already baked into the forecast's own headline text ("on this path...").
+  // Pure read: clones state, never mutates the session.
+  projection(): TrajectoryPoint[] {
+    let p = this.planet
+    let a = { ...this.acc }
+    let st = { ...this.stocks }
+    let dm = { ...this.deathModel }
+    const out: TrajectoryPoint[] = []
+    for (let r = this.round + 1; r <= 12; r++) {
+      const stepped = stepClimate(p, a, {})
+      p = stepped.planet; a = stepped.acc
+      st = stepStocks(st, [])
+      const resolved = resolveDeaths(
+        { round: r, planet: p, stocks: st, shock: null, politicalInstability: this.instability, cabinetPointsUnspent: 0, unspentOptions: [] },
+        dm,
+      )
+      dm = resolved.model
+      p = { ...p, cumulativeDeaths: resolved.entry.cumulative }
+      out.push({ round: r, year: p.year, temp: p.tempAnomaly, deaths: p.cumulativeDeaths, unresettled: p.displacedUnresettled })
+    }
+    return out
   }
 
   // --- narrative voice for the theatre ---
@@ -400,6 +433,8 @@ export class Session {
         return { portfolio: p, health: m.politicalHealth, gen: m.generation, band: band(m.politicalHealth), restriction: m.restrictions[0]?.forbidsFlag ?? null }
       }),
       forecast: projectForecast(this.forecasts[this.seat], this.planet, this.acc, this.round),
+      history: this.history,
+      projection: this.projection(),
       events: this.events.map((c) => ({ name: c.name, feedback: c.kind === 'feedback', flavor: c.flavor })),
       worldCard: { name: this.worldCard.name, tone: this.worldCard.tone, flavor: this.worldCard.flavor },
       pulledForward: this.pulledForward,

@@ -1,4 +1,5 @@
 import { Session, SEAT_NAME } from './session.ts'
+import { TrajectoryChart } from './Charts.tsx'
 
 type Snap = ReturnType<Session['snapshot']>
 
@@ -97,17 +98,36 @@ function CabinetPanel({ s }: { s: Snap }) {
 }
 
 function ForecastPanel({ s }: { s: Snap }) {
+  const hist = (key: 'temp' | 'deaths' | 'unresettled') => s.history.map((p) => ({ round: p.round, year: p.year, value: key === 'deaths' ? p.deaths / 1000 : p[key] }))
+  const proj = (key: 'temp' | 'deaths' | 'unresettled') => s.projection.map((p) => ({ round: p.round, year: p.year, value: key === 'deaths' ? p.deaths / 1000 : p[key] }))
+
   return (
     <div className="panel forecast">
       <h3><span>YOUR FORECAST · {s.forecast.name}</span><span>conf {(s.forecast.confidence * 100).toFixed(0)}%</span></h3>
       <div className="body">
         <div className="creed">"{s.forecast.creed}"</div>
         <div className="head">{s.forecast.headline}</div>
-        <table><tbody>
-          {s.forecast.checkpoints.map((c) => (
-            <tr key={c.year}><td>{c.year}</td><td>{c.temp.toFixed(2)}±{s.forecast.band.toFixed(2)}°C</td><td>food {Math.round(c.foodInsecure)}M</td><td>unset {Math.round(c.unresettled)}M</td></tr>
-          ))}
-        </tbody></table>
+
+        <TrajectoryChart
+          title="TEMPERATURE ANOMALY, °C"
+          nowRound={s.round}
+          thresholds={[{ value: 1.6, label: '1.6°C', color: 'var(--counter)' }]}
+          series={[{
+            label: 'temp', color: 'var(--cyan)',
+            history: hist('temp'), projection: proj('temp'),
+            format: (v) => `${v.toFixed(2)}°C`,
+          }]}
+        />
+        <TrajectoryChart
+          title="DEATHS (BN) · DISPLACEMENT (M)"
+          nowRound={s.round}
+          perSeriesScale
+          series={[
+            { label: 'deaths', color: 'var(--counter)', zeroBaseline: true, history: hist('deaths'), projection: proj('deaths'), format: (v) => `${v.toFixed(2)}bn` },
+            { label: 'unresettled', color: 'var(--amber)', zeroBaseline: true, history: hist('unresettled'), projection: proj('unresettled'), format: (v) => `${Math.round(v)}M` },
+          ]}
+        />
+
         <div className="dim" style={{ marginTop: 4, fontSize: 10 }}>
           feedback watch: {s.forecast.feedbackWatch.map((f) => `${f.name} ${(f.oddsNow * 100).toFixed(0)}→${(f.oddsEnd * 100).toFixed(0)}%`).join(' · ')}
         </div>
